@@ -1,0 +1,10 @@
+{
+  "home": {
+    "title": "預測市場",
+    "subtitle": "以真實 Polymarket 資料及 adapter-first 安全設計呈現。"
+  },
+  "portfolio": {
+    "title": "投資組合",
+    "subtitle": "連接錢包後載入真實持倉、成交及資金狀態。"
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "name": "chicken-dinner-v2",
+  "private": true,
+  "packageManager": "pnpm@10.33.2",
+  "description": "Adapter-first Chicken Dinner V2 prediction market app.",
+  "engines": {
+    "node": "24.x"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint . --fix",
+    "lint:check": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:unit": "vitest run",
+    "test:e2e": "playwright test",
+    "check:reference-boundaries": "node scripts/check-reference-boundaries.mjs",
+    "check:no-fake-market-data": "node scripts/check-no-fake-market-data.mjs",
+    "check:live-trading-safety": "node scripts/check-live-trading-safety.mjs",
+    "check:production-env-safety": "node scripts/check-production-env-safety.mjs",
+    "check:polymarket-production-data": "node scripts/check-polymarket-production-data.mjs",
+    "check:polymarket-collateral-setup-config": "node scripts/check-polymarket-collateral-setup-config.mjs",
+    "smoke:production-routes": "node scripts/smoke-production-routes.mjs"
+  },
+  "dependencies": {
+    "@polymarket/clob-client-v2": "^1.0.6",
+    "@polymarket/sdk": "^8.0.1",
+    "@reown/appkit": "1.8.19",
+    "@reown/appkit-adapter-wagmi": "1.8.19",
+    "@tanstack/react-query": "^5.100.9",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.14.0",
+    "next": "^16.2.6",
+    "next-intl": "^4.12.0",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "server-only": "0.0.1",
+    "tailwind-merge": "^3.6.0",
+    "viem": "^2.48.11",
+    "wagmi": "2.19.5",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@next/eslint-plugin-next": "^16.2.6",
+    "@playwright/test": "^1.60.0",
+    "@tailwindcss/postcss": "^4.2.4",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/node": "^24.12.4",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "eslint": "^10.0.1",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "jsdom": "^29.1.1",
+    "tailwindcss": "^4.2.4",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.52.0",
+    "vitest": "^4.1.5"
+  }
+}

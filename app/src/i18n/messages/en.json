@@ -1,0 +1,10 @@
+{
+  "home": {
+    "title": "Prediction markets",
+    "subtitle": "Real Polymarket data with adapter-first safety."
+  },
+  "portfolio": {
+    "title": "Portfolio",
+    "subtitle": "Connect a wallet to load real positions, fills, and funding readiness."
+  }
+}
