@@ -3,13 +3,17 @@ import { buildFundingPanelViewModel } from "@/features/prediction/funding/adapte
 import { buildPortfolioViewModel } from "@/features/prediction/portfolio/adapter";
 
 export default async function PortfolioPage({
+  params,
   searchParams
 }: {
+  params: Promise<{ locale: string }>;
   searchParams: Promise<{ address?: string }>;
 }) {
-  const query = await searchParams;
-  const portfolio = await buildPortfolioViewModel({ address: query.address });
-  const funding = buildFundingPanelViewModel(query.address);
+  const [{ locale }, query] = await Promise.all([params, searchParams]);
+  const [portfolio, funding] = await Promise.all([
+    buildPortfolioViewModel({ address: query.address }),
+    buildFundingPanelViewModel(query.address)
+  ]);
 
-  return <PortfolioView portfolio={portfolio} funding={funding} />;
+  return <PortfolioView portfolio={portfolio} funding={funding} locale={locale} />;
 }

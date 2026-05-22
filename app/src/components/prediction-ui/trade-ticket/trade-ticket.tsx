@@ -10,12 +10,51 @@ type Outcome = {
   tokenId: string | null;
 };
 
+function isZh(locale?: string) {
+  return locale?.toLowerCase().startsWith("zh") ?? false;
+}
+
+function disabledReasonLabel(reason: string | null, locale?: string) {
+  const en: Record<string, string> = {
+    connect_wallet: "Connect a wallet before trading.",
+    deposit_wallet_unavailable: "Deposit wallet status is unavailable.",
+    deploy_deposit_wallet: "Deposit wallet must be deployed before trading.",
+    top_up_required: "Top-up required: pUSD must be in the deposit wallet.",
+    balance_allowance_unavailable: "Balance and allowance are unavailable.",
+    sync_clob_balance: "Sync CLOB balance before trading.",
+    approval_required: "Exact pUSD approval is required before trading.",
+    live_top_up_disabled: "Live top-up gates are disabled on the server.",
+    market_not_tradable: "Trading is not available for this market.",
+    missing_token_id: "Token unavailable for this outcome."
+  };
+  const zh: Record<string, string> = {
+    connect_wallet: "請先連接錢包。",
+    deposit_wallet_unavailable: "Deposit Wallet 狀態不可用。",
+    deploy_deposit_wallet: "交易前必須先部署 Deposit Wallet。",
+    top_up_required: "需要充值：pUSD 必須在 Deposit Wallet 內。",
+    balance_allowance_unavailable: "餘額及授權狀態不可用。",
+    sync_clob_balance: "交易前請先同步 CLOB 餘額。",
+    approval_required: "交易前需要精確 pUSD 授權。",
+    live_top_up_disabled: "伺服器 live top-up 閘門未啟用。",
+    market_not_tradable: "此市場暫不可交易。",
+    missing_token_id: "此選項沒有可用 token。"
+  };
+  if (!reason) {
+    return isZh(locale)
+      ? "Live submit remains locked until all real funding checks pass."
+      : "Live submit remains locked until all real funding checks pass.";
+  }
+  return (isZh(locale) ? zh : en)[reason] ?? reason;
+}
+
 export function TradeTicket({
   ticket,
-  outcomes
+  outcomes,
+  locale
 }: {
   ticket: PredictionTradeTicketViewModel;
   outcomes: Outcome[];
+  locale?: string;
 }) {
   const [side, setSide] = useState<"BUY" | "SELL">(ticket.side);
   const [selectedTokenId, setSelectedTokenId] = useState(ticket.selectedTokenId);
@@ -43,7 +82,7 @@ export function TradeTicket({
                   : "focus-ring border-b-[3px] border-transparent pb-2 text-base font-semibold text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)]"
               }
             >
-              {option === "BUY" ? "Buy" : "Sell"}
+              {option === "BUY" ? (isZh(locale) ? "買入" : "Buy") : isZh(locale) ? "賣出" : "Sell"}
             </button>
           ))}
         </div>
@@ -53,18 +92,18 @@ export function TradeTicket({
           className="focus-ring inline-flex items-center gap-1 pb-2 text-sm font-semibold text-[var(--foreground)]"
           aria-label="Order type"
         >
-          Market
+          {isZh(locale) ? "市價" : "Market"}
           <ChevronDown className="size-4 text-[var(--muted-foreground)]" aria-hidden="true" />
         </button>
       </div>
 
       <div className="mb-3 flex items-center justify-between gap-3 rounded-md bg-[var(--muted)] px-3 py-2">
         <div className="text-xs font-semibold text-[var(--muted-foreground)]">
-          Trading status
+          {isZh(locale) ? "交易狀態" : "Trading status"}
         </div>
         <div className="flex items-center gap-1 text-xs font-semibold text-[var(--foreground)]">
           <ShieldCheck className="size-4" aria-hidden="true" />
-          Fail-closed
+          {isZh(locale) ? "Fail-closed" : "Fail-closed"}
         </div>
       </div>
 
@@ -93,9 +132,9 @@ export function TradeTicket({
 
       <div className="mb-2 flex items-center gap-3">
         <label className="shrink-0">
-          <span className="block text-lg font-medium">Amount</span>
+          <span className="block text-lg font-medium">{isZh(locale) ? "金額" : "Amount"}</span>
           <span className="block text-xs text-[var(--muted-foreground)]">
-            Wallet required
+            {isZh(locale) ? "需要錢包" : "Wallet required"}
           </span>
         </label>
         <input
@@ -109,7 +148,7 @@ export function TradeTicket({
 
       <div className="mb-4 grid grid-cols-2 gap-3">
         <label className="space-y-1 text-xs font-semibold text-[var(--muted-foreground)]">
-          Market price
+          {isZh(locale) ? "市場價格" : "Market price"}
           <input
             className="h-11 w-full rounded-md border border-[var(--border)] bg-[var(--input)] px-3 text-sm font-semibold text-[var(--foreground)] outline-none"
             value={selected?.price ?? ""}
@@ -118,7 +157,7 @@ export function TradeTicket({
           />
         </label>
         <label className="space-y-1 text-xs font-semibold text-[var(--muted-foreground)]">
-          Selected
+          {isZh(locale) ? "已選擇" : "Selected"}
           <input
             className="h-11 w-full rounded-md border border-[var(--border)] bg-[var(--input)] px-3 text-sm font-semibold text-[var(--foreground)] outline-none"
             value={selected?.label ?? ""}
@@ -136,14 +175,16 @@ export function TradeTicket({
           type="button"
         >
           <LockKeyhole className="size-4" aria-hidden="true" />
-          Submit blocked
+          {isZh(locale) ? "提交已封鎖" : "Submit blocked"}
         </button>
       </div>
 
       <p className="mt-3 text-xs leading-5 text-[var(--muted-foreground)]">
         {unavailable
-          ? ticket.disabledReason ?? "Trading is not available for this market."
-          : "Live submit remains blocked until wallet, funding, and server gates are ready."}
+          ? disabledReasonLabel(ticket.disabledReason, locale)
+          : isZh(locale)
+            ? "錢包、充值及伺服器閘門均通過後才可提交。"
+            : "Wallet, funding, and server gates passed; submit still uses the guarded live path."}
       </p>
     </section>
   );

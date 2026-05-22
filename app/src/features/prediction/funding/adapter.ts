@@ -1,14 +1,20 @@
 import { listAddFundsMethods } from "@/lib/funding/methods";
 import { buildFundingReadinessViewModel } from "@/lib/polymarket/funding-readiness";
-import { resolveWalletAccount } from "@/lib/wallet/account";
+import { buildLiveTopUpFundingSnapshot } from "@/lib/polymarket/live-topup-status";
 
-export function buildFundingPanelViewModel(address?: string | null) {
-  const account = resolveWalletAccount(address);
+export async function buildFundingPanelViewModel(address?: string | null) {
+  const liveTopUp = await buildLiveTopUpFundingSnapshot({ address });
 
   return {
-    account,
+    account: liveTopUp.account,
+    liveTopUp,
     readiness: buildFundingReadinessViewModel({
-      walletConnected: account.status === "connected"
+      walletConnected: liveTopUp.account.status === "connected",
+      credentialsReady: liveTopUp.env.status === "ready",
+      collateralReady: liveTopUp.readiness.topUpReady,
+      upstreamAvailable:
+        liveTopUp.depositWallet.status === "available" &&
+        liveTopUp.depositWallet.deployed !== null
     }),
     methods: listAddFundsMethods(),
     withdraw: {

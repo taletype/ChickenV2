@@ -25,6 +25,8 @@
     "smoke:production-routes": "node scripts/smoke-production-routes.mjs"
   },
   "dependencies": {
+    "@polymarket/builder-relayer-client": "^0.0.9",
+    "@polymarket/builder-signing-sdk": "^1.0.0",
     "@polymarket/clob-client-v2": "^1.0.6",
     "@polymarket/sdk": "^8.0.1",
     "@reown/appkit": "1.8.19",

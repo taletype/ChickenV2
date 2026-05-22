@@ -33,7 +33,26 @@ const serverEnvSchema = z.object({
     .enum(["true", "false"])
     .default("false")
     .transform((value) => value === "true"),
-  POLYGON_RPC_URL: z.string().url().optional()
+  POLYMARKET_LIVE_TOP_UP_ENABLED: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
+  POLYMARKET_LIVE_TOP_UP_KILL_SWITCH: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
+  RELAYER_URL: z.string().url().optional(),
+  BUILDER_API_KEY: z.string().optional(),
+  BUILDER_SECRET: z.string().optional(),
+  BUILDER_PASS_PHRASE: z.string().optional(),
+  CLOB_API_KEY: z.string().optional(),
+  CLOB_SECRET: z.string().optional(),
+  CLOB_PASS_PHRASE: z.string().optional(),
+  CLOB_API_URL: z.string().url().optional(),
+  POLYGON_RPC_URL: z.string().url().optional(),
+  PUSD_ADDRESS: z.string().optional(),
+  DEPOSIT_WALLET_FACTORY_ADDRESS: z.string().optional(),
+  DEPOSIT_WALLET_IMPLEMENTATION_ADDRESS: z.string().optional()
 });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;
@@ -52,6 +71,21 @@ export function getServerEnv(): ServerEnv {
     POLYMARKET_OFFICIAL_FUNDING_URL: process.env.POLYMARKET_OFFICIAL_FUNDING_URL,
     POLYMARKET_COLLATERAL_SETUP_ENABLED:
       process.env.POLYMARKET_COLLATERAL_SETUP_ENABLED,
-    POLYGON_RPC_URL: process.env.POLYGON_RPC_URL
+    POLYMARKET_LIVE_TOP_UP_ENABLED: process.env.POLYMARKET_LIVE_TOP_UP_ENABLED,
+    POLYMARKET_LIVE_TOP_UP_KILL_SWITCH:
+      process.env.POLYMARKET_LIVE_TOP_UP_KILL_SWITCH,
+    RELAYER_URL: process.env.RELAYER_URL,
+    BUILDER_API_KEY: process.env.BUILDER_API_KEY,
+    BUILDER_SECRET: process.env.BUILDER_SECRET,
+    BUILDER_PASS_PHRASE: process.env.BUILDER_PASS_PHRASE,
+    CLOB_API_KEY: process.env.CLOB_API_KEY,
+    CLOB_SECRET: process.env.CLOB_SECRET,
+    CLOB_PASS_PHRASE: process.env.CLOB_PASS_PHRASE,
+    CLOB_API_URL: process.env.CLOB_API_URL,
+    POLYGON_RPC_URL: process.env.POLYGON_RPC_URL,
+    PUSD_ADDRESS: process.env.PUSD_ADDRESS,
+    DEPOSIT_WALLET_FACTORY_ADDRESS: process.env.DEPOSIT_WALLET_FACTORY_ADDRESS,
+    DEPOSIT_WALLET_IMPLEMENTATION_ADDRESS:
+      process.env.DEPOSIT_WALLET_IMPLEMENTATION_ADDRESS
   });
 }

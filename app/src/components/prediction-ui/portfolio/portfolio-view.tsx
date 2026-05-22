@@ -6,9 +6,9 @@ import type { PredictionPortfolioViewModel } from "@/features/prediction/types";
 import { FundingPanel } from "../funding/funding-panel";
 import { StatusBanner } from "../status-banner";
 
-type FundingPanelViewModel = ReturnType<
+type FundingPanelViewModel = Awaited<ReturnType<
   typeof import("@/features/prediction/funding/adapter").buildFundingPanelViewModel
->;
+>>;
 
 type PortfolioTab = "positions" | "fills";
 
@@ -71,10 +71,12 @@ function getOutcomeTone(outcome: string) {
 
 export function PortfolioView({
   portfolio,
-  funding
+  funding,
+  locale
 }: {
   portfolio: PredictionPortfolioViewModel;
   funding: FundingPanelViewModel;
+  locale?: string;
 }) {
   const [activeTab, setActiveTab] = useState<PortfolioTab>("positions");
   const totalCurrentValue =
@@ -188,7 +190,7 @@ export function PortfolioView({
           </section>
 
           <aside className="lg:sticky lg:top-[9.5rem] lg:self-start">
-            <FundingPanel funding={funding} />
+            <FundingPanel funding={funding} locale={locale} />
           </aside>
         </div>
       </div>

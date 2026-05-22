@@ -12,11 +12,13 @@ import { TradeTicket } from "./trade-ticket/trade-ticket";
 export function MarketDetailLayout({
   detail,
   chart,
-  ticket
+  ticket,
+  locale
 }: {
   detail: PredictionMarketDetailViewModel;
   chart: PredictionChartViewModel;
   ticket: PredictionTradeTicketViewModel;
+  locale?: string;
 }) {
   if (detail.status !== "ready" || !detail.market) {
     return (
@@ -49,14 +51,14 @@ export function MarketDetailLayout({
             </section>
           ) : null}
           <div className="lg:hidden">
-            <TradeTicket ticket={ticket} outcomes={detail.market.outcomes} />
+            <TradeTicket ticket={ticket} outcomes={detail.market.outcomes} locale={locale} />
           </div>
         </div>
       </div>
 
       <aside className="hidden gap-4 lg:sticky lg:top-[9.5rem] lg:grid lg:max-h-[calc(100vh-7rem)] lg:self-start lg:overflow-y-auto">
         <div className="grid gap-6">
-          <TradeTicket ticket={ticket} outcomes={detail.market.outcomes} />
+          <TradeTicket ticket={ticket} outcomes={detail.market.outcomes} locale={locale} />
           <p className="border border-dashed border-[var(--border)] p-3 text-xs leading-5 text-[var(--muted-foreground)]">
             Trading actions remain guarded by V2 wallet, funding, and server-side
             checks before any order can be submitted.

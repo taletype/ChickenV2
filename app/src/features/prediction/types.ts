@@ -54,6 +54,19 @@ export type PredictionTradeTicketViewModel = {
   price: number | null;
   size: number | null;
   disabledReason: string | null;
+  funding:
+    | {
+        status: "ready";
+        step: "ready";
+        topUpReady: true;
+        canSubmitLiveOrder: boolean;
+      }
+    | {
+        status: "blocked";
+        step: string;
+        topUpReady: false;
+        canSubmitLiveOrder: false;
+      };
 };
 
 export type PredictionPortfolioViewModel = {
