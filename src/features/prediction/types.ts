@@ -192,3 +192,44 @@ export type PredictionOpenOrdersViewModel = {
   reason: string | null;
   error: string | null;
 };
+
+export type PredictionPublicProfileViewModel = {
+  status: "unavailable" | "empty" | "ready";
+  slug: string;
+  displayLabel: string;
+  positions: PredictionPortfolioViewModel["positions"];
+  activity: PredictionActivityViewModel;
+  reason: string | null;
+  error: string | null;
+};
+
+export type PredictionLeaderboardRow = {
+  id: string;
+  rank: number;
+  displayLabel: string;
+  volume: number | null;
+  pnl: number | null;
+  marketsTraded: number | null;
+};
+
+export type PredictionLeaderboardViewModel = {
+  status: "unavailable" | "empty" | "ready";
+  rows: PredictionLeaderboardRow[];
+  reason: string | null;
+  error: string | null;
+};
+
+export type PredictionNotificationInboxViewModel = {
+  status: "unavailable" | "empty" | "ready";
+  notifications: Array<{
+    id: string;
+    title: string;
+    body: string | null;
+    href: string | null;
+    createdAt: string | null;
+    unread: boolean;
+  }>;
+  unreadCount: number | null;
+  reason: string | null;
+  error: string | null;
+};

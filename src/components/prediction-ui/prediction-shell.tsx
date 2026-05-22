@@ -1,11 +1,11 @@
-import {
-  Info,
-  Search,
-} from "lucide-react";
+import { Search } from "lucide-react";
 import { Suspense } from "react";
 import { Link } from "@/i18n/navigation";
 import { getLocalizedPolymarketFeedPath } from "@/features/prediction/routes";
+import { buildNotificationInboxViewModel } from "@/features/prediction/notifications/adapter";
+import { HowItWorksButton } from "./how-it-works-button";
 import { MobileBottomNav } from "./mobile-bottom-nav";
+import { NotificationsButton } from "./notifications-button";
 import { WalletConnectButton } from "./wallet-connect-button";
 import { WalletRouteSync } from "./wallet-route-sync";
 
@@ -18,6 +18,7 @@ export function PredictionShell({
 }) {
   const isZh = locale.toLowerCase().startsWith("zh");
   const searchLabel = isZh ? "搜尋市場" : "Search markets";
+  const notifications = buildNotificationInboxViewModel();
 
   return (
     <div className="min-h-screen pb-[72px] lg:pb-0">
@@ -61,14 +62,12 @@ export function PredictionShell({
                 <Search className="size-4" aria-hidden="true" />
               </button>
             </form>
-            <button className="focus-ring inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-sm px-4 py-2 text-sm font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--accent)]">
-              <Info className="size-4" aria-hidden="true" />
-              {isZh ? "運作方式" : "How it works"}
-            </button>
+            <HowItWorksButton locale={locale} />
           </div>
 
           <div className="flex min-w-fit shrink-0 items-center gap-2">
-            <WalletConnectButton />
+            <NotificationsButton inbox={notifications} locale={locale} />
+            <WalletConnectButton locale={locale} />
           </div>
         </div>
       </header>

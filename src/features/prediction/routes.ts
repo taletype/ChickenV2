@@ -1,4 +1,9 @@
 import type { SupportedLocale } from "@/i18n/locales";
+import {
+  normalizePredictionCategory,
+  PREDICTION_CATEGORIES,
+  type PredictionCategory
+} from "@/lib/polymarket/categories";
 
 export const PREDICTION_FEED_SORTS = ["volume", "liquidity", "recent"] as const;
 
@@ -9,6 +14,27 @@ export type PredictionFeedPathOptions = {
   search?: string | null;
   sort?: string | null;
 };
+
+export type PredictionDiscoveryTarget =
+  | {
+      kind: "feed";
+      category?: PredictionCategory;
+      search?: string;
+      sort?: PredictionFeedSort;
+    }
+  | {
+      kind: "profile";
+      slug: string;
+    };
+
+const ROOT_PROFILE_PREFIX = "@";
+
+export function normalizePredictionSearchSlug(value: string | null | undefined) {
+  return decodeURIComponent(value ?? "")
+    .replace(/[-_]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
 export function normalizePredictionFeedSort(
   value: string | null | undefined
@@ -49,6 +75,61 @@ export function buildLocalizedPolymarketFeedPath(
 
   const query = params.toString();
   return `${getLocalizedPolymarketFeedPath(locale)}${query ? `?${query}` : ""}`;
+}
+
+export function buildLocalizedProfilePath(
+  locale: SupportedLocale | string,
+  slug: string
+) {
+  const normalizedSlug = slug.trim().replace(/^@+/, "");
+  return `/${locale}/profile/${encodeURIComponent(normalizedSlug)}`;
+}
+
+export function buildLocalizedPredictionResultsPath(
+  locale: SupportedLocale | string,
+  slug: string,
+  options: Pick<PredictionFeedPathOptions, "sort"> = {}
+) {
+  const normalizedSlug = slug.trim();
+  const sort = normalizePredictionFeedSort(options.sort);
+  const suffix = sort === "volume" ? "" : `?sort=${encodeURIComponent(sort)}`;
+  return `/${locale}/predictions/${encodeURIComponent(normalizedSlug)}${suffix}`;
+}
+
+export function resolvePredictionRootSlugTarget(
+  slug: string
+): PredictionDiscoveryTarget {
+  const normalizedSlug = slug.trim().toLowerCase();
+
+  if (normalizedSlug === "new") {
+    return {
+      kind: "feed",
+      sort: "recent"
+    };
+  }
+
+  if (normalizedSlug.startsWith(ROOT_PROFILE_PREFIX)) {
+    return {
+      kind: "profile",
+      slug: normalizedSlug.slice(ROOT_PROFILE_PREFIX.length)
+    };
+  }
+
+  const category = normalizePredictionCategory(normalizedSlug);
+  if (
+    category !== "trending" ||
+    PREDICTION_CATEGORIES.includes(normalizedSlug as PredictionCategory)
+  ) {
+    return {
+      kind: "feed",
+      category
+    };
+  }
+
+  return {
+    kind: "feed",
+    search: normalizePredictionSearchSlug(slug)
+  };
 }
 
 export type PredictionMobileNavItem = {

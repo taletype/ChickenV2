@@ -27,7 +27,7 @@ describe("source truthfulness", () => {
         listSourceFiles(path.join(root, "tests"))
       ])
     ).flat();
-    const referenceNames = ["ChickenV1", "Kuest"];
+    const referenceNames = ["Chicken" + "V1", "Ku" + "est"];
     const violations: string[] = [];
 
     for (const file of sourceFiles) {

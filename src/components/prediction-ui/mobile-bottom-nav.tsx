@@ -1,6 +1,17 @@
 "use client";
 
-import { BarChart3, House, Search, Sparkles, X } from "lucide-react";
+import {
+  BarChart3,
+  BookOpen,
+  House,
+  Menu,
+  Search,
+  Settings,
+  Sparkles,
+  Trophy,
+  X
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { usePathname } from "@/i18n/navigation";
@@ -24,20 +35,40 @@ function normalizePathname(pathname: string) {
 
 export function MobileBottomNav({ locale }: { locale: string }) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const pathname = normalizePathname(usePathname());
   const searchParams = useSearchParams();
   const activeSort = searchParams.get("sort");
   const items = getPredictionMobileNavItems(locale);
-  const labels = localeKey(locale) === "zh"
+  const labels: {
+    search: string;
+    searchMarkets: string;
+    close: string;
+    menu: string;
+    closeMenu: string;
+    leaderboard: string;
+    settings: string;
+    docs: string;
+  } = localeKey(locale) === "zh"
     ? {
         search: "搜尋",
         searchMarkets: "搜尋市場",
-        close: "關閉搜尋"
+        close: "關閉搜尋",
+        menu: "選單",
+        closeMenu: "關閉選單",
+        leaderboard: "排行榜",
+        settings: "設定",
+        docs: "文件"
       }
     : {
         search: "Search",
         searchMarkets: "Search markets",
-        close: "Close search"
+        close: "Close search",
+        menu: "Menu",
+        closeMenu: "Close menu",
+        leaderboard: "Leaderboard",
+        settings: "Settings",
+        docs: "Docs"
       };
 
   return (
@@ -87,12 +118,49 @@ export function MobileBottomNav({ locale }: { locale: string }) {
         </div>
       ) : null}
 
+      {isMenuOpen ? (
+        <div className="fixed inset-0 z-50 bg-black/20 lg:hidden">
+          <div className="absolute inset-x-0 bottom-0 rounded-t-[1.25rem] border border-b-0 border-[var(--border)] bg-[var(--background)] px-4 pb-6 pt-4 shadow-[0_-24px_64px_-36px_rgba(15,23,42,0.6)]">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div className="text-sm font-semibold text-[var(--foreground)]">
+                {labels.menu}
+              </div>
+              <button
+                type="button"
+                className="focus-ring inline-flex size-9 items-center justify-center rounded-sm text-[var(--muted-foreground)] hover:bg-[var(--accent)] hover:text-[var(--foreground)]"
+                aria-label={labels.closeMenu}
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <X className="size-4" aria-hidden="true" />
+              </button>
+            </div>
+            <div className="grid gap-2">
+              <MobileMenuLink
+                href={`/${locale}/leaderboard`}
+                label={labels.leaderboard}
+                icon={Trophy}
+              />
+              <MobileMenuLink
+                href={`/${locale}/settings`}
+                label={labels.settings}
+                icon={Settings}
+              />
+              <MobileMenuLink
+                href={`/${locale}/docs`}
+                label={labels.docs}
+                icon={BookOpen}
+              />
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <nav
         className="fixed inset-x-0 bottom-0 z-40 lg:hidden"
         aria-label="Primary navigation"
       >
         <div className="border-t border-[var(--border)] bg-[var(--background)]/95 pb-[calc(env(safe-area-inset-bottom)+0.25rem)] shadow-[0_-20px_48px_-36px_rgba(15,23,42,0.55)] backdrop-blur-sm">
-          <div className="grid h-[66px] grid-cols-4">
+          <div className="grid h-[66px] grid-cols-5">
             <MobileNavLink
               href={items[0]?.href ?? getLocalizedPolymarketFeedPath(locale)}
               label={items[0]?.label ?? "Home"}
@@ -117,6 +185,12 @@ export function MobileBottomNav({ locale }: { locale: string }) {
               active={pathname.startsWith("/portfolio")}
               icon={BarChart3}
             />
+            <MobileNavButton
+              label={labels.menu}
+              active={isMenuOpen}
+              icon={Menu}
+              onClick={() => setIsMenuOpen(true)}
+            />
           </div>
         </div>
       </nav>
@@ -132,7 +206,7 @@ function MobileNavLink({
 }: {
   href: string;
   label: string;
-  icon: typeof House;
+  icon: LucideIcon;
   active?: boolean;
 }) {
   return (
@@ -158,7 +232,7 @@ function MobileNavButton({
   onClick
 }: {
   label: string;
-  icon: typeof Search;
+  icon: LucideIcon;
   active: boolean;
   onClick: () => void;
 }) {
@@ -176,5 +250,25 @@ function MobileNavButton({
       <Icon className="size-[17px]" aria-hidden="true" />
       <span>{label}</span>
     </button>
+  );
+}
+
+function MobileMenuLink({
+  href,
+  label,
+  icon: Icon
+}: {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+}) {
+  return (
+    <a
+      href={href}
+      className="focus-ring flex h-12 items-center gap-3 rounded-md border border-[var(--border)] px-3 text-sm font-semibold text-[var(--foreground)] hover:bg-[var(--accent)]"
+    >
+      <Icon className="size-4 text-[var(--muted-foreground)]" aria-hidden="true" />
+      <span>{label}</span>
+    </a>
   );
 }
