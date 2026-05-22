@@ -1,1 +1,10 @@
 Kuest/
+.next/
+node_modules/
+test-results/
+playwright-report/
+coverage/
+*.tsbuildinfo
+.env
+.env*.local
+.vercel
