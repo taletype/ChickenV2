@@ -15,6 +15,7 @@ export type PolymarketMarket = {
   image: string | null;
   volume24hr: number | null;
   liquidity: number | null;
+  createdAt: string | null;
   endDate: string | null;
   active: boolean;
   closed: boolean;
@@ -22,6 +23,8 @@ export type PolymarketMarket = {
   negRisk: boolean;
   tickSize: number;
   minimumOrderSize: number | null;
+  resolutionSource: string | null;
+  resolutionSourceUrl: string | null;
   outcomes: PolymarketOutcome[];
   sourceUpdatedAt: string | null;
   fetchedAt: string;

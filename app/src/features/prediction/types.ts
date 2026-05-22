@@ -38,6 +38,19 @@ export type PredictionMarketDetailViewModel = {
   status: "ready" | "unavailable";
   market: PredictionMarketCardViewModel | null;
   description: string | null;
+  metadata: {
+    conditionId: string | null;
+    createdAt: string | null;
+    updatedAt: string | null;
+    endDate: string | null;
+    volume24hr: number | null;
+    liquidity: number | null;
+    minimumOrderSize: number | null;
+    tickSize: number;
+    negRisk: boolean;
+    resolutionSource: string | null;
+    resolutionSourceUrl: string | null;
+  } | null;
   freshness: DataFreshness;
   error: string | null;
 };

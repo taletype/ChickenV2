@@ -2,7 +2,10 @@
 
 import { ChevronDown, LockKeyhole, ShieldCheck } from "lucide-react";
 import { useMemo, useState } from "react";
-import type { PredictionTradeTicketViewModel } from "@/features/prediction/types";
+import type {
+  PredictionMarketCardViewModel,
+  PredictionTradeTicketViewModel
+} from "@/features/prediction/types";
 import { useWalletConnectionState } from "@/hooks/use-wallet-connection-state";
 
 type Outcome = {
@@ -50,12 +53,86 @@ function disabledReasonLabel(reason: string | null, locale?: string) {
   return (isZh(locale) ? zh : en)[reason] ?? reason;
 }
 
+function formatPercent(value: number | null) {
+  return value === null ? "N/A" : `${Math.round(value * 100)}%`;
+}
+
+function outcomeTone(index: number) {
+  return index === 1
+    ? {
+        surface: "bg-[var(--no)]",
+        depth: "bg-[color-mix(in_srgb,var(--no)_80%,black)]"
+      }
+    : {
+        surface: "bg-[var(--yes)]",
+        depth: "bg-[color-mix(in_srgb,var(--yes)_80%,black)]"
+      };
+}
+
+function OutcomeButton({
+  outcome,
+  index,
+  selected,
+  onSelect
+}: {
+  outcome: Outcome;
+  index: number;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  const tone = outcomeTone(index);
+
+  return (
+    <div className="relative min-w-0 flex-1 overflow-hidden rounded-lg pb-[5px]">
+      <div
+        className={
+          selected
+            ? `pointer-events-none absolute inset-x-0 bottom-0 h-4 rounded-b-lg ${tone.depth}`
+            : "pointer-events-none absolute inset-x-0 bottom-0 h-4 rounded-b-lg bg-[var(--border)]"
+        }
+      />
+      <button
+        type="button"
+        disabled={!outcome.tokenId}
+        onClick={onSelect}
+        className={
+          selected
+            ? `focus-ring relative flex h-12 w-full translate-y-0 items-center justify-center gap-1 overflow-hidden rounded-lg px-3 text-sm font-semibold text-white shadow-sm transition-transform hover:translate-y-px active:translate-y-0.5 ${tone.surface}`
+            : "focus-ring relative flex h-12 w-full translate-y-0 items-center justify-center gap-1 overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 text-sm font-semibold text-[var(--foreground)] transition-transform hover:translate-y-px active:translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-55"
+        }
+      >
+        <span className="min-w-0 truncate opacity-75">{outcome.label}</span>
+        <span className="shrink-0 text-base font-bold">{formatPercent(outcome.price)}</span>
+      </button>
+    </div>
+  );
+}
+
+function ReadinessRow({
+  label,
+  value
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-3 border-b border-[var(--border)] py-2 last:border-0 last:pb-0">
+      <span className="text-xs font-medium text-[var(--muted-foreground)]">{label}</span>
+      <span className="max-w-[12rem] text-right text-xs font-semibold leading-5 text-[var(--foreground)]">
+        {value}
+      </span>
+    </div>
+  );
+}
+
 export function TradeTicket({
   ticket,
+  market,
   outcomes,
   locale
 }: {
   ticket: PredictionTradeTicketViewModel;
+  market: PredictionMarketCardViewModel;
   outcomes: Outcome[];
   locale?: string;
 }) {
@@ -72,14 +149,39 @@ export function TradeTicket({
   const clientDisabledReason =
     walletState.status === "unsupported_chain"
       ? "unsupported_chain"
+      : !selected?.tokenId
+        ? "missing_token_id"
       : ticket.disabledReason;
   const unavailable =
     ticket.status !== "ready" ||
     !selected?.tokenId ||
     walletState.status === "unsupported_chain";
+  const amountChips =
+    side === "BUY" ? ["+$1", "+$5", "+$10", "+$100"] : ["25%", "50%", "75%"];
+  const readinessStatus = unavailable
+    ? isZh(locale)
+      ? "已封鎖"
+      : "Blocked"
+    : isZh(locale)
+      ? "可檢查"
+      : "Ready for checks";
 
   return (
     <section className="w-full rounded-xl border border-[var(--border)] bg-[var(--card)] p-4 shadow-[var(--panel-shadow)] lg:w-[21.25rem]">
+      <div className="mb-4 flex items-center gap-3.5">
+        <div className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-md bg-[var(--muted)]">
+          {market.image ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={market.image} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <ShieldCheck className="size-5 text-[var(--muted-foreground)]" aria-hidden="true" />
+          )}
+        </div>
+        <span className="line-clamp-2 text-base font-bold leading-tight text-[var(--foreground)]">
+          {market.question}
+        </span>
+      </div>
+
       <div className="mb-4 flex items-center justify-between gap-4">
         <div className="flex items-center gap-4 text-sm font-semibold">
           {(["BUY", "SELL"] as const).map((option) => (
@@ -100,44 +202,32 @@ export function TradeTicket({
 
         <button
           type="button"
-          className="focus-ring inline-flex items-center gap-1 pb-2 text-sm font-semibold text-[var(--foreground)]"
+          className="focus-ring group inline-flex items-center gap-1 bg-transparent pb-2 text-sm font-semibold text-[var(--foreground)]"
           aria-label="Order type"
+          aria-haspopup="menu"
+          aria-expanded="false"
         >
           {isZh(locale) ? "市價" : "Market"}
-          <ChevronDown className="size-4 text-[var(--muted-foreground)]" aria-hidden="true" />
+          <ChevronDown
+            className="size-4 text-[var(--muted-foreground)] transition-transform group-hover:rotate-180"
+            aria-hidden="true"
+          />
         </button>
-      </div>
-
-      <div className="mb-3 flex items-center justify-between gap-3 rounded-md bg-[var(--muted)] px-3 py-2">
-        <div className="text-xs font-semibold text-[var(--muted-foreground)]">
-          {isZh(locale) ? "交易狀態" : "Trading status"}
-        </div>
-        <div className="flex items-center gap-1 text-xs font-semibold text-[var(--foreground)]">
-          <ShieldCheck className="size-4" aria-hidden="true" />
-          {isZh(locale) ? "Fail-closed" : "Fail-closed"}
-        </div>
       </div>
 
       <div className="mb-2 flex gap-2">
         {outcomes.map((outcome, index) => (
-          <button
+          <OutcomeButton
             key={`${outcome.label}-${outcome.tokenId ?? "missing"}`}
-            type="button"
-            disabled={!outcome.tokenId}
-            onClick={() => setSelectedTokenId(outcome.tokenId)}
-            className={
-              selected?.tokenId === outcome.tokenId
-                ? index === 1
-                  ? "focus-ring flex h-12 min-w-0 flex-1 items-center justify-center gap-1 rounded-md bg-[var(--no)] px-3 text-sm font-semibold text-white shadow-sm"
-                  : "focus-ring flex h-12 min-w-0 flex-1 items-center justify-center gap-1 rounded-md bg-[var(--yes)] px-3 text-sm font-semibold text-white shadow-sm"
-                : "focus-ring flex h-12 min-w-0 flex-1 items-center justify-center gap-1 rounded-md border border-[var(--border)] bg-[var(--card)] px-3 text-sm font-semibold text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-55"
-            }
-          >
-            <span className="min-w-0 truncate opacity-75">{outcome.label}</span>
-            <span className="shrink-0 text-base font-bold">
-              {outcome.price === null ? "N/A" : `${Math.round(outcome.price * 100)}%`}
-            </span>
-          </button>
+            outcome={outcome}
+            index={index}
+            selected={selected?.tokenId === outcome.tokenId}
+            onSelect={() => {
+              if (outcome.tokenId) {
+                setSelectedTokenId(outcome.tokenId);
+              }
+            }}
+          />
         ))}
       </div>
 
@@ -157,12 +247,25 @@ export function TradeTicket({
         />
       </div>
 
+      <div className="mb-4 flex flex-wrap gap-2">
+        {amountChips.map((chip) => (
+          <button
+            key={chip}
+            type="button"
+            disabled
+            className="inline-flex h-8 min-w-[3.25rem] cursor-not-allowed items-center justify-center rounded-md border border-[var(--border)] px-2 text-xs font-semibold text-[var(--muted-foreground)] opacity-60"
+          >
+            {chip}
+          </button>
+        ))}
+      </div>
+
       <div className="mb-4 grid grid-cols-2 gap-3">
         <label className="space-y-1 text-xs font-semibold text-[var(--muted-foreground)]">
           {isZh(locale) ? "市場價格" : "Market price"}
           <input
             className="h-11 w-full rounded-md border border-[var(--border)] bg-[var(--input)] px-3 text-sm font-semibold text-[var(--foreground)] outline-none"
-            value={selected?.price ?? ""}
+            value={selected ? formatPercent(selected.price) : ""}
             readOnly
             aria-label="Price"
           />
@@ -176,6 +279,27 @@ export function TradeTicket({
             aria-label="Selected outcome"
           />
         </label>
+      </div>
+
+      <div className="mb-4 rounded-md bg-[var(--muted)] px-3 py-1">
+        <ReadinessRow
+          label={isZh(locale) ? "交易狀態" : "Trading status"}
+          value={readinessStatus}
+        />
+        <ReadinessRow
+          label={isZh(locale) ? "資金檢查" : "Funding checks"}
+          value={
+            ticket.funding.topUpReady
+              ? isZh(locale)
+                ? "已通過"
+                : "Passed"
+              : disabledReasonLabel(ticket.funding.step, locale)
+          }
+        />
+        <ReadinessRow
+          label={isZh(locale) ? "提交" : "Submit"}
+          value={isZh(locale) ? "保持封鎖" : "Fail-closed"}
+        />
       </div>
 
       <div className="relative w-full pb-1">

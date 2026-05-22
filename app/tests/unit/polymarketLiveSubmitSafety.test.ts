@@ -65,6 +65,7 @@ const market: PolymarketMarket = {
   image: null,
   volume24hr: null,
   liquidity: null,
+  createdAt: null,
   endDate: null,
   active: true,
   closed: false,
@@ -72,6 +73,8 @@ const market: PolymarketMarket = {
   negRisk: false,
   tickSize: 0.01,
   minimumOrderSize: 5,
+  resolutionSource: null,
+  resolutionSourceUrl: null,
   outcomes: [
     { label: "Yes", tokenId: "123", price: 0.5, tradable: true },
     { label: "No", tokenId: "456", price: 0.5, tradable: true }

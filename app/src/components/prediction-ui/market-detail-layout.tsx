@@ -4,6 +4,7 @@ import type {
   PredictionTradeTicketViewModel
 } from "@/features/prediction/types";
 import { MarketHeader } from "./market-header";
+import { MarketDetailTabs } from "./market-detail-tabs";
 import { OutcomeList } from "./outcome-list";
 import { PriceChart } from "./price-chart";
 import { StatusBanner } from "./status-banner";
@@ -31,7 +32,7 @@ export function MarketDetailLayout({
   }
 
   return (
-    <div className="app-container grid min-h-screen gap-8 pb-12 lg:grid-cols-[minmax(0,3fr)_21.25rem]">
+    <div className="app-container grid min-h-screen gap-8 pb-12 lg:grid-cols-[minmax(0,1fr)_21.25rem]">
       <div className="grid gap-6 pb-20 pt-5 md:pb-0">
         <div className="grid gap-3">
           <MarketHeader market={detail.market} />
@@ -42,30 +43,37 @@ export function MarketDetailLayout({
 
         <div className="grid gap-6">
           <OutcomeList market={detail.market} />
-          {detail.description ? (
-            <section className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
-              <h2 className="text-base font-medium">Rules</h2>
-              <p className="mt-3 whitespace-pre-line text-sm leading-6 text-[var(--muted-foreground)]">
-                {detail.description}
-              </p>
-            </section>
-          ) : null}
           <div className="lg:hidden">
-            <TradeTicket ticket={ticket} outcomes={detail.market.outcomes} locale={locale} />
+            <TradeTicket
+              ticket={ticket}
+              market={detail.market}
+              outcomes={detail.market.outcomes}
+              locale={locale}
+            />
           </div>
+          <MarketDetailTabs
+            market={detail.market}
+            description={detail.description}
+            metadata={detail.metadata}
+            locale={locale}
+          />
         </div>
       </div>
 
       <aside className="hidden gap-4 lg:sticky lg:top-[9.5rem] lg:grid lg:max-h-[calc(100vh-7rem)] lg:self-start lg:overflow-y-auto">
         <div className="grid gap-6">
-          <TradeTicket ticket={ticket} outcomes={detail.market.outcomes} locale={locale} />
-          <p className="border border-dashed border-[var(--border)] p-3 text-xs leading-5 text-[var(--muted-foreground)]">
+          <TradeTicket
+            ticket={ticket}
+            market={detail.market}
+            outcomes={detail.market.outcomes}
+            locale={locale}
+          />
+          <p className="pb-2 text-center text-xs font-medium leading-5 text-[var(--muted-foreground)] lg:-mt-2 lg:pb-0">
             Trading actions remain guarded by V2 wallet, funding, and server-side
             checks before any order can be submitted.
           </p>
         </div>
       </aside>
-
     </div>
   );
 }

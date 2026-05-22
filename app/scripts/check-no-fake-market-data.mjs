@@ -4,12 +4,12 @@ import path from "node:path";
 const root = process.cwd();
 const sourceRoot = path.join(root, "src");
 const bannedPatterns = [
-  /mockMarkets?/i,
-  /seedMarkets?/i,
-  /sampleMarkets?/i,
-  /demoMarkets?/i,
-  /fake(Balances?|Positions?|Markets?|PnL|Prices?|Chart)/i,
-  /placeholder(Balance|Position|Market|PnL|Price|Chart)/i
+  /mock(Balances?|Positions?|Markets?|PnL|Prices?|Charts?|Orders?|Fills?|Activities?|Comments?)/i,
+  /seed(Balances?|Positions?|Markets?|PnL|Prices?|Charts?|Orders?|Fills?|Activities?|Comments?)/i,
+  /sample(Balances?|Positions?|Markets?|PnL|Prices?|Charts?|Orders?|Fills?|Activities?|Comments?)/i,
+  /demo(Balances?|Positions?|Markets?|PnL|Prices?|Charts?|Orders?|Fills?|Activities?|Comments?)/i,
+  /fake(Balances?|Positions?|Markets?|PnL|Prices?|Charts?|Orders?|Fills?|Activities?|Comments?)/i,
+  /placeholder(Balance|Position|Market|PnL|Price|Chart|Order|Fill|Activity|Comment)/i
 ];
 
 async function listFiles(dir) {

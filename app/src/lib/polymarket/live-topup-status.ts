@@ -17,6 +17,10 @@ import {
   type TokenBalanceSnapshot
 } from "./deposit-wallet";
 import { PUSD_DECIMALS } from "./contracts";
+import {
+  resolveFundingStateModel,
+  type FundingStateModel
+} from "./funding-readiness-state-machine";
 import { getLiveTopUpEnvStatus, type LiveTopUpEnvStatus } from "./live-topup-env";
 
 export type LiveTopUpPublicEnvStatus = {
@@ -52,7 +56,9 @@ export type LiveTopUpFundingSnapshot = {
   readiness: {
     step: LiveTopUpStep;
     topUpReady: boolean;
+    readyForLiveTopUp: boolean;
     canSubmitLiveOrder: boolean;
+    stateModel: FundingStateModel;
     checkedAt: string;
     checklist: Array<{
       id:
@@ -172,6 +178,21 @@ export async function buildLiveTopUpFundingSnapshot(input: {
     ownerAddress: account.address,
     amountBaseUnits: requiredAmountBaseUnits(input.requiredAmount)
   });
+  const stateModel = resolveFundingStateModel({
+    walletConnected: account.status === "connected",
+    walletChainSupported: null,
+    depositWalletAvailable: depositWallet.status === "available",
+    depositWalletDeployed:
+      depositWallet.status === "available" ? depositWallet.deployed : null,
+    pusdBalanceAvailable: depositWalletPusd.status === "available",
+    pusdBalancePositive: hasPositiveBalance(depositWalletPusd),
+    clobBalanceAllowanceAvailable: clob.status === "available",
+    clobBalanceReady: clob.status === "available" && clob.balanceReady,
+    clobAllowanceReady: clob.status === "available" && clob.allowanceReady,
+    approvalPlanAvailable: approvalPreview.status === "ready",
+    liveTopUpEnabled: env.status === "ready",
+    killSwitchActive: env.killSwitchActive
+  });
 
   return {
     account,
@@ -186,7 +207,9 @@ export async function buildLiveTopUpFundingSnapshot(input: {
     readiness: {
       step,
       topUpReady,
-      canSubmitLiveOrder: topUpReady && env.status === "ready",
+      readyForLiveTopUp: stateModel.readyForLiveTopUp,
+      canSubmitLiveOrder: stateModel.readyForLiveTopUp,
+      stateModel,
       checkedAt: new Date().toISOString(),
       checklist: [
         {

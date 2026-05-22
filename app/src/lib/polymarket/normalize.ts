@@ -100,6 +100,7 @@ export function normalizePolymarketMarket(
     image: parseString(raw.image ?? raw.icon),
     volume24hr: parseNumber(raw.volume24hr ?? raw.volume24hrClob ?? raw.volume),
     liquidity: parseNumber(raw.liquidityClob ?? raw.liquidity),
+    createdAt: parseString(raw.createdAt),
     endDate: parseString(raw.endDate ?? raw.endDateIso),
     active: parseBoolean(raw.active, true),
     closed: parseBoolean(raw.closed, false),
@@ -107,6 +108,8 @@ export function normalizePolymarketMarket(
     negRisk: parseBoolean(raw.negRisk, false),
     tickSize: parseNumber(raw.minimumTickSize ?? raw.tickSize) ?? 0.01,
     minimumOrderSize: parseNumber(raw.minimumOrderSize),
+    resolutionSource: parseString(raw.resolutionSource),
+    resolutionSourceUrl: parseString(raw.resolutionSourceUrl),
     outcomes,
     sourceUpdatedAt: parseString(raw.updatedAt),
     fetchedAt

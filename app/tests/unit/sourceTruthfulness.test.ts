@@ -21,7 +21,12 @@ async function listSourceFiles(dir: string): Promise<string[]> {
 describe("source truthfulness", () => {
   it("does not import runtime code from reference apps", async () => {
     const root = process.cwd();
-    const sourceFiles = await listSourceFiles(path.join(root, "src"));
+    const sourceFiles = (
+      await Promise.all([
+        listSourceFiles(path.join(root, "src")),
+        listSourceFiles(path.join(root, "tests"))
+      ])
+    ).flat();
     const referenceNames = ["ChickenV1", "Kuest"];
     const violations: string[] = [];
 
@@ -45,12 +50,12 @@ describe("source truthfulness", () => {
     const root = process.cwd();
     const sourceFiles = await listSourceFiles(path.join(root, "src"));
     const bannedPatterns = [
-      /mockMarkets?/i,
-      /seedMarkets?/i,
-      /sampleMarkets?/i,
-      /demoMarkets?/i,
-      /fake(Balances?|Positions?|Markets?|PnL|Prices?|Chart)/i,
-      /placeholder(Balance|Position|Market|PnL|Price|Chart)/i
+      /mock(Balances?|Positions?|Markets?|PnL|Prices?|Charts?|Orders?|Fills?|Activities?|Comments?)/i,
+      /seed(Balances?|Positions?|Markets?|PnL|Prices?|Charts?|Orders?|Fills?|Activities?|Comments?)/i,
+      /sample(Balances?|Positions?|Markets?|PnL|Prices?|Charts?|Orders?|Fills?|Activities?|Comments?)/i,
+      /demo(Balances?|Positions?|Markets?|PnL|Prices?|Charts?|Orders?|Fills?|Activities?|Comments?)/i,
+      /fake(Balances?|Positions?|Markets?|PnL|Prices?|Charts?|Orders?|Fills?|Activities?|Comments?)/i,
+      /placeholder(Balance|Position|Market|PnL|Price|Chart|Order|Fill|Activity|Comment)/i
     ];
     const violations: string[] = [];
 

@@ -8,7 +8,8 @@ import {
   buildDepositWalletApprovalPlan,
   buildDepositWalletApprovalPreview,
   buildSignedDepositWalletApprovalPayload,
-  buildDepositWalletPusdApprovalCall
+  buildDepositWalletPusdApprovalCall,
+  validateDepositWalletPusdApprovalCall
 } from "@/lib/polymarket/deposit-wallet-approval";
 import { POST as postApprovalSubmit } from "@/app/api/polymarket/deposit-wallet/approval-submit/route";
 
@@ -102,6 +103,17 @@ describe("deposit wallet foundation", () => {
           "115792089237316195423570985008687907853269984665640564039457584007913129639935"
       })
     ).toThrow("invalid_amount");
+  });
+
+  it("rejects approval calls when the submitted amount is not exact", () => {
+    const call = buildDepositWalletPusdApprovalCall({ amountBaseUnits: "1000000" });
+
+    expect(() =>
+      validateDepositWalletPusdApprovalCall({
+        call,
+        amountBaseUnits: "2000000"
+      })
+    ).toThrow("amount_mismatch");
   });
 
   it("does not build a signed approval payload when live top-up gates are closed", () => {

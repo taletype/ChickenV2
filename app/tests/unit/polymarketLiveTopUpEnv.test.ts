@@ -137,6 +137,9 @@ describe("live top-up env validation", () => {
       expect(snapshot.env.status).toBe("blocked");
       expect(snapshot.env.enabled).toBe(false);
       expect(snapshot.readiness.canSubmitLiveOrder).toBe(false);
+      expect(snapshot.readiness.readyForLiveTopUp).toBe(false);
+      expect(snapshot.readiness.stateModel.flags).toContain("live_topup_disabled");
+      expect(snapshot.readiness.stateModel.flags).toContain("approval_submit_blocked");
       expect(snapshot.balances.connectedWalletPusd.status).toBe("unavailable");
       expect(snapshot.balances.connectedWalletPusd.atoms).toBeNull();
       expect(snapshot.balances.depositWalletPusd.status).toBe("unavailable");

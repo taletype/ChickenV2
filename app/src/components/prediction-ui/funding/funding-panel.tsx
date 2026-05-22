@@ -8,9 +8,10 @@ import {
   Copy,
   QrCode,
   RotateCw,
+  ShieldCheck,
   TriangleAlert
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { DepositWalletCall } from "@polymarket/builder-relayer-client";
 import { useWalletClient } from "wagmi";
 import { useWalletConnectionState } from "@/hooks/use-wallet-connection-state";
@@ -107,6 +108,19 @@ function formatBaseUnits(value: string) {
   } catch {
     return value;
   }
+}
+
+function tradeReadyCollateralValue(
+  clob: LiveTopUpFundingSnapshot["balances"]["clob"],
+  locale?: string
+) {
+  if (clob.status !== "available") {
+    return clob.reason;
+  }
+  if (!clob.balanceReady || !clob.allowanceReady) {
+    return isZh(locale) ? "尚未可交易" : "Not trade-ready";
+  }
+  return formatPusd(String(Math.min(clob.balance, clob.allowance)));
 }
 
 function isZh(locale?: string) {
@@ -395,54 +409,60 @@ export function FundingPanelContent({
   }
 
   return (
-    <section className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4 shadow-[var(--panel-shadow)]">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-base font-medium">{isZh(locale) ? "充值" : "Funding"}</h2>
+    <section className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-4 shadow-[var(--panel-shadow)]">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-base font-semibold text-[var(--foreground)]">
+            {isZh(locale) ? "資金" : "Funding"}
+          </h2>
+          <p className="mt-1 text-xs font-semibold text-[var(--muted-foreground)]">
+            {isZh(locale) ? "USDC / Polygon，只顯示真實或不可用狀態。" : "USDC on Polygon, real or unavailable states only."}
+          </p>
+        </div>
         <CircleDollarSign className="size-5 text-[var(--primary)]" aria-hidden="true" />
       </div>
 
-      <div
-        className={
-          walletState.status === "unsupported_chain"
-            ? "mt-4 rounded-md border border-[var(--warning)] bg-[color-mix(in_srgb,var(--warning)_10%,white)] p-3"
-            : "mt-4 rounded-md border border-[var(--border)] bg-[var(--muted)] p-3"
-        }
-      >
-        <div className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
-          {isZh(locale) ? "錢包狀態" : "Wallet state"}
-        </div>
-        <div className="mt-1 break-all text-sm font-bold text-[var(--foreground)]">
-          {walletStatusLabel(walletState, locale)}
-        </div>
+      <div className="mt-4 grid gap-2">
+        <FundingStatusCard
+          icon={<ShieldCheck className="size-4" aria-hidden="true" />}
+          label={isZh(locale) ? "錢包狀態" : "Wallet state"}
+          value={walletStatusLabel(walletState, locale)}
+          tone={walletState.status === "connected" ? "ready" : walletState.status === "unsupported_chain" ? "warning" : "blocked"}
+        />
+        <FundingStatusCard
+          icon={<CheckCircle2 className="size-4" aria-hidden="true" />}
+          label={isZh(locale) ? "充值準備狀態" : "Top-up readiness"}
+          value={readinessLabel(liveTopUp.readiness.step, locale)}
+          tone={liveTopUp.readiness.topUpReady ? "ready" : "warning"}
+        />
       </div>
 
-      <div className="mt-3 rounded-md bg-[var(--muted)] p-3">
-        <div className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
-          {isZh(locale) ? "充值準備狀態" : "Top-up readiness"}
-        </div>
-        <div className="mt-1 text-sm font-bold text-[var(--foreground)]">
-          {readinessLabel(liveTopUp.readiness.step, locale)}
-        </div>
-      </div>
-
-      <div className="mt-3 rounded-md border border-[var(--border)] p-3">
-        <div className="flex items-center justify-between gap-3">
-          <div>
+      <div className="mt-3 rounded-lg border border-[var(--border)] bg-[var(--background)] p-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
             <div className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
-              {isZh(locale) ? "Deposit Wallet" : "Deposit wallet"}
+              {isZh(locale) ? "Transfer Funds" : "Transfer Funds"}
             </div>
-            <div className="mt-1 break-all text-sm font-semibold text-[var(--foreground)]">
+            <p className="mt-1 text-sm font-semibold text-[var(--foreground)]">
+              {isZh(locale)
+                ? "複製 Deposit Wallet 或使用掃描式面板核對地址。"
+                : "Copy the deposit wallet or use the scan-style panel to verify the address."}
+            </p>
+            <p className="mt-2 break-all text-xs font-bold text-[var(--muted-foreground)]">
               {depositWalletAddress ??
                 (isZh(locale)
                   ? "未取得真實錢包地址前不可用"
                   : "Unavailable until a real wallet address is known")}
-            </div>
+            </p>
           </div>
-          <div className="grid size-14 shrink-0 place-items-center rounded-md border border-[var(--border)] bg-[var(--muted)]">
-            <QrCode className="size-6 text-[var(--muted-foreground)]" aria-hidden="true" />
+          <div className="grid size-20 shrink-0 place-items-center rounded-lg border border-[var(--border)] bg-[var(--muted)]">
+            <span className="grid size-12 place-items-center rounded-md bg-[var(--background)] text-[var(--foreground)] shadow-sm">
+              <QrCode className="size-7" aria-hidden="true" />
+            </span>
           </div>
         </div>
-        <div className="mt-3 flex gap-2">
+
+        <div className="mt-3 grid grid-cols-2 gap-2">
           <button
             type="button"
             disabled={!depositWalletAddress}
@@ -453,7 +473,7 @@ export function FundingPanelContent({
                 window.setTimeout(() => setCopied(false), 1200);
               }
             }}
-            className="focus-ring inline-flex h-9 flex-1 items-center justify-center gap-2 rounded-md border border-[var(--border)] px-3 text-xs font-bold text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-50"
+            className="focus-ring inline-flex h-9 items-center justify-center gap-2 rounded-md border border-[var(--border)] px-3 text-xs font-bold text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Copy className="size-4" aria-hidden="true" />
             {copied ? (isZh(locale) ? "已複製" : "Copied") : isZh(locale) ? "複製" : "Copy"}
@@ -470,7 +490,7 @@ export function FundingPanelContent({
                 });
               }
             }}
-            className="focus-ring inline-flex h-9 flex-1 items-center justify-center gap-2 rounded-md border border-[var(--border)] px-3 text-xs font-bold text-[var(--foreground)] disabled:cursor-not-allowed disabled:text-[var(--muted-foreground)] disabled:opacity-50"
+            className="focus-ring inline-flex h-9 items-center justify-center gap-2 rounded-md border border-[var(--border)] px-3 text-xs font-bold text-[var(--foreground)] disabled:cursor-not-allowed disabled:text-[var(--muted-foreground)] disabled:opacity-50"
           >
             <RotateCw className="size-4" aria-hidden="true" />
             {isZh(locale) ? "同步" : "Sync"}
@@ -478,63 +498,86 @@ export function FundingPanelContent({
         </div>
       </div>
 
-      <div className="mt-3 grid gap-2">
-        <FundingMetric
+      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        <FundingStatusCard
           label={isZh(locale) ? "Deposit Wallet 狀態" : "Deposit wallet status"}
           value={deployedStatusLabel(liveTopUp.depositWallet, locale)}
+          tone={liveTopUp.depositWallet.status === "available" ? "ready" : "blocked"}
         />
-        <FundingMetric
-          label={isZh(locale) ? "已連接錢包 pUSD" : "Connected wallet pUSD"}
+        <FundingStatusCard
+          label={isZh(locale) ? "已連接錢包資金（pUSD）" : "Connected wallet funds (pUSD)"}
           value={
             connectedPusd.status === "available"
               ? formatPusd(connectedPusd.formatted)
               : connectedPusd.reason
           }
+          tone={connectedPusd.status === "available" ? "ready" : "blocked"}
         />
-        <FundingMetric
-          label={isZh(locale) ? "Deposit Wallet pUSD" : "Deposit wallet pUSD"}
+        <FundingStatusCard
+          label={isZh(locale) ? "Deposit Wallet 資金（pUSD）" : "Deposit wallet funds (pUSD)"}
           value={
             depositPusd.status === "available" ? formatPusd(depositPusd.formatted) : depositPusd.reason
           }
+          tone={depositPusd.status === "available" ? "ready" : "blocked"}
         />
-        <FundingMetric
-          label={isZh(locale) ? "CLOB 餘額 / 授權" : "CLOB balance / allowance"}
+        <FundingStatusCard
+          label={isZh(locale) ? "CLOB 餘額" : "CLOB balance"}
           value={
             clob.status === "available"
-              ? `${formatPusd(String(clob.balance))} / ${formatPusd(String(clob.allowance))}`
+              ? formatPusd(String(clob.balance))
               : clob.reason
           }
+          tone={clob.status === "available" && clob.balanceReady ? "ready" : "blocked"}
+        />
+        <FundingStatusCard
+          label={isZh(locale) ? "CLOB 授權" : "CLOB allowance"}
+          value={
+            clob.status === "available"
+              ? formatPusd(String(clob.allowance))
+              : clob.reason
+          }
+          tone={clob.status === "available" && clob.allowanceReady ? "ready" : "blocked"}
+        />
+        <FundingStatusCard
+          label={isZh(locale) ? "可用交易抵押品" : "Spendable trade-ready collateral"}
+          value={tradeReadyCollateralValue(clob, locale)}
+          tone={liveTopUp.readiness.stateModel.spendableCollateralReady ? "ready" : "blocked"}
         />
       </div>
 
-      <div className="mt-3 grid gap-2">
-        {liveTopUp.readiness.checklist.map((item) => (
-          <div
-            key={item.id}
-            className="flex min-h-9 items-center justify-between gap-3 rounded-md bg-[var(--muted)] px-3 py-2"
-          >
-            <span className="min-w-0 text-xs font-semibold text-[var(--muted-foreground)]">
-              {checklistLabel(item.id, item.label, locale)}
-            </span>
-            <span
-              className={
-                item.state === "ready"
-                  ? "inline-flex shrink-0 items-center gap-1 text-xs font-bold text-[var(--yes)]"
-                  : "inline-flex shrink-0 items-center gap-1 text-xs font-bold text-[var(--warning)]"
-              }
+      <div className="mt-3 rounded-lg border border-[var(--border)] p-3">
+        <div className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
+          {isZh(locale) ? "Readiness checklist" : "Readiness checklist"}
+        </div>
+        <div className="mt-2 grid gap-2">
+          {liveTopUp.readiness.checklist.map((item) => (
+            <div
+              key={item.id}
+              className="flex min-h-9 items-center justify-between gap-3 rounded-md bg-[var(--muted)] px-3 py-2"
             >
-              {item.state === "ready" ? (
-                <CheckCircle2 className="size-3.5" aria-hidden="true" />
-              ) : (
-                <TriangleAlert className="size-3.5" aria-hidden="true" />
-              )}
-              {item.state}
-            </span>
-          </div>
-        ))}
+              <span className="min-w-0 text-xs font-semibold text-[var(--muted-foreground)]">
+                {checklistLabel(item.id, item.label, locale)}
+              </span>
+              <span
+                className={
+                  item.state === "ready"
+                    ? "inline-flex shrink-0 items-center gap-1 text-xs font-bold text-[var(--yes)]"
+                    : "inline-flex shrink-0 items-center gap-1 text-xs font-bold text-[var(--warning)]"
+                }
+              >
+                {item.state === "ready" ? (
+                  <CheckCircle2 className="size-3.5" aria-hidden="true" />
+                ) : (
+                  <TriangleAlert className="size-3.5" aria-hidden="true" />
+                )}
+                {item.state}
+              </span>
+            </div>
+          ))}
+        </div>
       </div>
 
-      <div className="mt-3 rounded-md border border-[var(--border)] p-3">
+      <div className="mt-3 rounded-lg border border-[var(--border)] p-3">
         <div className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
           {isZh(locale) ? "精確授權預覽" : "Exact approval preview"}
         </div>
@@ -593,9 +636,9 @@ export function FundingPanelContent({
           href={method.href}
           target="_blank"
           rel="noreferrer"
-          className="focus-ring mt-4 flex h-11 items-center justify-center gap-2 rounded-md bg-[var(--primary)] px-4 text-sm font-bold text-white shadow-sm"
+          className="focus-ring mt-3 flex h-11 items-center justify-center gap-2 rounded-md border border-[var(--border)] bg-[var(--background)] px-4 text-sm font-bold text-[var(--foreground)] shadow-sm"
         >
-          {isZh(locale) ? "充值" : "Top up"}
+          {isZh(locale) ? "前往官方充值頁" : "Open official funding site"}
           <ArrowUpRight className="size-4" aria-hidden="true" />
         </a>
       ) : null}
@@ -674,4 +717,61 @@ function FundingMetric({ label, value }: { label: string; value: string }) {
       </span>
     </div>
   );
+}
+
+function FundingStatusCard({
+  icon,
+  label,
+  value,
+  tone
+}: {
+  icon?: ReactNode;
+  label: string;
+  value: string;
+  tone: "ready" | "warning" | "blocked";
+}) {
+  return (
+    <div className="min-h-[82px] rounded-lg border border-[var(--border)] bg-[var(--muted)] p-3">
+      <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-[var(--muted-foreground)]">
+        <span
+          className={
+            tone === "ready"
+              ? "text-[var(--yes)]"
+              : tone === "warning"
+                ? "text-[var(--warning)]"
+                : "text-[var(--muted-foreground)]"
+          }
+        >
+          {icon ?? <FundingToneIcon tone={tone} />}
+        </span>
+        <span>{label}</span>
+      </div>
+      <div className="mt-2 flex items-start gap-2">
+        <span
+          className={
+            tone === "ready"
+              ? "mt-0.5 shrink-0 text-[var(--yes)]"
+              : tone === "warning"
+                ? "mt-0.5 shrink-0 text-[var(--warning)]"
+                : "mt-0.5 shrink-0 text-[var(--muted-foreground)]"
+          }
+        >
+          <FundingToneIcon tone={tone} />
+        </span>
+        <div className="min-w-0 break-words text-xs font-bold leading-5 text-[var(--foreground)]">
+          {value}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FundingToneIcon({ tone }: { tone: "ready" | "warning" | "blocked" }) {
+  if (tone === "ready") {
+    return <CheckCircle2 className="size-3.5" aria-hidden="true" />;
+  }
+  if (tone === "warning") {
+    return <TriangleAlert className="size-3.5" aria-hidden="true" />;
+  }
+  return <Ban className="size-3.5" aria-hidden="true" />;
 }
