@@ -30,7 +30,9 @@ const requiredTokens = [
   "amount_mismatch",
   "approval_batch_must_contain_one_call",
   "Submit disabled: live top-up gates are closed",
-  "browser signing is not wired"
+  "signTypedData",
+  "approval_required",
+  "approval-submit"
 ];
 
 const missing = requiredTokens.filter((token) => !corpus.includes(token));

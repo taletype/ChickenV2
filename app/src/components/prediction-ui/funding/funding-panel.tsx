@@ -11,16 +11,78 @@ import {
   TriangleAlert
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import type { DepositWalletCall } from "@polymarket/builder-relayer-client";
+import { useWalletClient } from "wagmi";
 import { useWalletConnectionState } from "@/hooks/use-wallet-connection-state";
 import {
   SUPPORTED_WALLET_CHAIN_NAME,
   type WalletConnectionViewState
 } from "@/lib/wallet/appkit";
+import type { EvmAddress } from "@/lib/wallet/address";
 
 type FundingPanelViewModel = Awaited<ReturnType<
   typeof import("@/features/prediction/funding/adapter").buildFundingPanelViewModel
 >>;
 type LiveTopUpFundingSnapshot = FundingPanelViewModel["liveTopUp"];
+
+type DepositWalletApprovalPlanResponse =
+  | {
+      status: "ready";
+      ownerAddress: EvmAddress;
+      depositWalletAddress: EvmAddress;
+      amountBaseUnits: string;
+      spenderAddress: EvmAddress;
+      tokenAddress: EvmAddress;
+      nonce: string;
+      deadline: string;
+      calls: DepositWalletCall[];
+      typedData: {
+        domain: {
+          name: "DepositWallet";
+          version: "1";
+          chainId: 137;
+          verifyingContract: EvmAddress;
+        };
+        types: {
+          Call: Array<{ name: "target" | "value" | "data"; type: string }>;
+          Batch: Array<{ name: "wallet" | "nonce" | "deadline" | "calls"; type: string }>;
+        };
+        primaryType: "Batch";
+        message: {
+          wallet: EvmAddress;
+          nonce: string;
+          deadline: string;
+          calls: DepositWalletCall[];
+        };
+      };
+    }
+  | {
+      status: "blocked";
+      code: string;
+    };
+
+type DepositWalletApprovalSubmitResponse =
+  | {
+      status: "submitted";
+      transactionID: string;
+      state: string;
+    }
+  | {
+      status: "blocked";
+      code: string;
+    };
+
+type ApprovalSubmissionState =
+  | { status: "idle" }
+  | { status: "planning" }
+  | { status: "signing" }
+  | { status: "submitting" }
+  | { status: "submitted"; transactionID: string; state: string }
+  | { status: "blocked"; code: string };
+type ReadyDepositWalletApprovalPlan = Extract<
+  DepositWalletApprovalPlanResponse,
+  { status: "ready" }
+>;
 
 function formatPusd(value: string | null) {
   if (!value) {
@@ -118,12 +180,45 @@ function walletStatusLabel(walletState: WalletConnectionViewState, locale?: stri
 
 function approvalSubmitLabel(
   liveTopUp: LiveTopUpFundingSnapshot,
+  walletState: WalletConnectionViewState,
+  signerReady: boolean,
+  submission: ApprovalSubmissionState,
   locale?: string
 ) {
+  if (submission.status === "planning") {
+    return isZh(locale) ? "正在準備精確授權" : "Preparing exact approval";
+  }
+  if (submission.status === "signing") {
+    return isZh(locale) ? "等待錢包簽署" : "Awaiting wallet signature";
+  }
+  if (submission.status === "submitting") {
+    return isZh(locale) ? "正在提交授權" : "Submitting approval";
+  }
+  if (submission.status === "submitted") {
+    return isZh(locale) ? "授權已提交" : "Approval submitted";
+  }
+  if (submission.status === "blocked") {
+    return isZh(locale) ? `授權被阻止：${submission.code}` : `Approval blocked: ${submission.code}`;
+  }
   if (liveTopUp.env.status !== "ready") {
     return isZh(locale)
       ? "提交已停用：live top-up 閘門未通過"
       : "Submit disabled: live top-up gates are closed";
+  }
+  if (walletState.status !== "connected") {
+    return isZh(locale) ? "請先連接錢包" : "Connect wallet to approve";
+  }
+  if (liveTopUp.readiness.step === "approval_required") {
+    if (liveTopUp.approvalPreview.status !== "ready") {
+      return isZh(locale) ? "授權預覽不可用" : "Approval preview unavailable";
+    }
+    if (!signerReady) {
+      return isZh(locale) ? "錢包簽署器不可用" : "Wallet signer unavailable";
+    }
+    return isZh(locale) ? "簽署精確授權" : "Sign exact approval";
+  }
+  if (liveTopUp.readiness.step === "ready") {
+    return isZh(locale) ? "授權已同步" : "Approval already synced";
   }
   if (!liveTopUp.readiness.topUpReady) {
     return isZh(locale)
@@ -131,8 +226,8 @@ function approvalSubmitLabel(
       : "Submit disabled: waiting for real top-up readiness";
   }
   return isZh(locale)
-    ? "提交已停用：瀏覽器簽署尚未接線"
-    : "Submit disabled: browser signing is not wired";
+    ? "提交已停用：等待授權狀態"
+    : "Submit disabled: waiting for approval state";
 }
 
 function checklistLabel(
@@ -182,6 +277,9 @@ export function FundingPanelContent({
   walletState: WalletConnectionViewState;
 }) {
   const liveTopUp = useLiveTopUpSnapshot(funding.liveTopUp, walletState);
+  const { data: walletClient } = useWalletClient();
+  const [approvalSubmission, setApprovalSubmission] =
+    useState<ApprovalSubmissionState>({ status: "idle" });
   const method = funding.methods[0] ?? null;
   const depositWallet =
     liveTopUp.depositWallet.status === "available" ? liveTopUp.depositWallet : null;
@@ -191,6 +289,110 @@ export function FundingPanelContent({
   const clob = liveTopUp.balances.clob;
   const [copied, setCopied] = useState(false);
   const approvalPreview = liveTopUp.approvalPreview;
+  const approvalPending =
+    approvalSubmission.status === "planning" ||
+    approvalSubmission.status === "signing" ||
+    approvalSubmission.status === "submitting";
+  const canSubmitApproval =
+    liveTopUp.env.status === "ready" &&
+    liveTopUp.readiness.step === "approval_required" &&
+    approvalPreview.status === "ready" &&
+    walletState.status === "connected" &&
+    Boolean(walletClient) &&
+    !approvalPending;
+
+  async function submitExactApproval() {
+    if (
+      !canSubmitApproval ||
+      walletState.status !== "connected" ||
+      approvalPreview.status !== "ready" ||
+      !walletClient
+    ) {
+      return;
+    }
+
+    try {
+      setApprovalSubmission({ status: "planning" });
+      const planResponse = await fetch("/api/polymarket/deposit-wallet/approval-plan", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          address: walletState.address,
+          amountBaseUnits: approvalPreview.amountBaseUnits,
+          spenderAddress: approvalPreview.spenderAddress
+        })
+      });
+      const plan = (await planResponse.json().catch(() => null)) as
+        | DepositWalletApprovalPlanResponse
+        | null;
+
+      if (!planResponse.ok || !plan || plan.status !== "ready") {
+        setApprovalSubmission({
+          status: "blocked",
+          code: plan?.status === "blocked" ? plan.code : "approval_plan_unavailable"
+        });
+        return;
+      }
+      const readyPlan: ReadyDepositWalletApprovalPlan = plan;
+
+      setApprovalSubmission({ status: "signing" });
+      const signTypedData = walletClient.signTypedData as (input: {
+        account: EvmAddress;
+        domain: ReadyDepositWalletApprovalPlan["typedData"]["domain"];
+        types: ReadyDepositWalletApprovalPlan["typedData"]["types"];
+        primaryType: "Batch";
+        message: ReadyDepositWalletApprovalPlan["typedData"]["message"];
+      }) => Promise<`0x${string}`>;
+      const signature = await signTypedData({
+        account: walletState.address,
+        domain: readyPlan.typedData.domain,
+        types: readyPlan.typedData.types,
+        primaryType: readyPlan.typedData.primaryType,
+        message: readyPlan.typedData.message
+      });
+
+      setApprovalSubmission({ status: "submitting" });
+      const submitResponse = await fetch(
+        "/api/polymarket/deposit-wallet/approval-submit",
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            ownerAddress: readyPlan.ownerAddress,
+            depositWalletAddress: readyPlan.depositWalletAddress,
+            nonce: readyPlan.nonce,
+            deadline: readyPlan.deadline,
+            signature,
+            calls: readyPlan.calls,
+            amountBaseUnits: readyPlan.amountBaseUnits,
+            spenderAddress: readyPlan.spenderAddress
+          })
+        }
+      );
+      const result = (await submitResponse.json().catch(() => null)) as
+        | DepositWalletApprovalSubmitResponse
+        | null;
+
+      if (!submitResponse.ok || result?.status !== "submitted") {
+        setApprovalSubmission({
+          status: "blocked",
+          code: result?.status === "blocked" ? result.code : "approval_submit_failed"
+        });
+        return;
+      }
+
+      setApprovalSubmission({
+        status: "submitted",
+        transactionID: result.transactionID,
+        state: result.state
+      });
+    } catch (error) {
+      setApprovalSubmission({
+        status: "blocked",
+        code: error instanceof Error ? error.message : "approval_submit_failed"
+      });
+    }
+  }
 
   return (
     <section className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4 shadow-[var(--panel-shadow)]">
@@ -366,11 +568,24 @@ export function FundingPanelContent({
 
       <button
         type="button"
-        disabled
-        className="mt-3 flex h-11 w-full cursor-not-allowed items-center justify-center gap-2 rounded-md border border-[var(--border)] bg-[var(--card)] px-4 text-sm font-bold text-[var(--muted-foreground)]"
+        disabled={!canSubmitApproval}
+        onClick={() => {
+          void submitExactApproval();
+        }}
+        className={
+          canSubmitApproval
+            ? "focus-ring mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-md bg-[var(--primary)] px-4 text-sm font-bold text-white shadow-sm"
+            : "mt-3 flex h-11 w-full cursor-not-allowed items-center justify-center gap-2 rounded-md border border-[var(--border)] bg-[var(--card)] px-4 text-sm font-bold text-[var(--muted-foreground)]"
+        }
       >
         <Ban className="size-4" aria-hidden="true" />
-        {approvalSubmitLabel(liveTopUp, locale)}
+        {approvalSubmitLabel(
+          liveTopUp,
+          walletState,
+          Boolean(walletClient),
+          approvalSubmission,
+          locale
+        )}
       </button>
 
       {method ? (
