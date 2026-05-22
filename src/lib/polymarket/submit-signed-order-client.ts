@@ -2,6 +2,8 @@ export type SubmitSignedOrderClientResult =
   | {
       status: "submitted";
       orderId: string;
+      sdkStatus?: string;
+      diagnostics?: Record<string, unknown>;
     }
   | {
       status: "blocked" | "failed";

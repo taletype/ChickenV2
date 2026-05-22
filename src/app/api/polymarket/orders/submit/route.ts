@@ -20,9 +20,11 @@ export async function POST(request: Request) {
 
   const adapter = createLiveClobTradingAdapter();
   const result = await adapter.submitSignedOrder(parsed.data);
+  const responseStatus =
+    result.status === "submitted" ? 200 : result.status === "blocked" ? 403 : 502;
 
   return NextResponse.json(result, {
     headers: NO_STORE_HEADERS,
-    status: result.status === "submitted" ? 200 : 403
+    status: responseStatus
   });
 }

@@ -2,9 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { ServerEnv } from "@/lib/env/server-env";
 import type { PolymarketMarket } from "@/lib/polymarket/types";
 import { buildRedactedPolymarketDiagnostics } from "@/lib/polymarket/live-trading-audit";
-import type { LiveOrderRateLimitStore } from "@/lib/polymarket/live-order-rate-limits";
 import { prepareSignedPolymarketOrder } from "@/lib/polymarket/order-preparation";
-import { createMemoryPolymarketOrderAttemptStore } from "@/lib/polymarket/order-attempts";
 import { submitViaSdkFirstAdapter } from "@/lib/polymarket/sdk-first";
 
 const owner = "0x000000000000000000000000000000000000beef";
@@ -114,6 +112,7 @@ const signedOrder = {
 };
 
 const readMarketBySlug = async (slug: string) => (slug === market.slug ? market : null);
+const collateralReady = async () => ({ ready: true as const });
 
 describe("V2 live submit safety architecture", () => {
   it("prepares only after canonical market and token validation pass", async () => {
@@ -167,9 +166,9 @@ describe("V2 live submit safety architecture", () => {
     const result = await submitViaSdkFirstAdapter(
       { intent, signedOrder: { ...signedOrder, signer: otherWallet } },
       {
+        checkCollateralReadiness: collateralReady,
         credentials,
         env: env(),
-        orderAttemptStore: createMemoryPolymarketOrderAttemptStore(),
         readMarketBySlug
       }
     );
@@ -194,50 +193,44 @@ describe("V2 live submit safety architecture", () => {
     expect(result.status === "blocked" ? result.code : null).toBe("live_trading_disabled");
   });
 
-  it("blocks rate limit and cooldown paths", async () => {
-    const rateLimitStore: LiveOrderRateLimitStore = {
-      async check() {
-        return { allowed: true, remaining: 1, resetAt: null };
-      },
-      async checkCooldown() {
-        return {
-          allowed: false,
-          code: "cooldown_active",
-          resetAt: "2026-05-22T00:15:00.000Z"
-        };
-      },
-      async recordFailedSubmit() {}
-    };
+  it("keeps submit blocked until collateral is ready", async () => {
     const result = await submitViaSdkFirstAdapter(
       { intent, signedOrder },
       {
         credentials,
         env: env(),
-        orderAttemptStore: createMemoryPolymarketOrderAttemptStore(),
-        rateLimitStore,
-        readMarketBySlug
-      }
-    );
-
-    expect(result.status).toBe("blocked");
-    expect(result.status === "blocked" ? result.code : null).toBe("cooldown_active");
-  });
-
-  it("keeps submit blocked without a configured adapter", async () => {
-    const result = await submitViaSdkFirstAdapter(
-      { intent, signedOrder, idempotencyKey: "client-123" },
-      {
-        credentials,
-        env: env(),
-        orderAttemptStore: createMemoryPolymarketOrderAttemptStore(),
+        checkCollateralReadiness: async () => ({
+          ready: false,
+          diagnostics: { collateralReady: false }
+        }),
         readMarketBySlug
       }
     );
 
     expect(result.status).toBe("blocked");
     expect(result.status === "blocked" ? result.code : null).toBe(
-      "signed_submit_adapter_not_configured"
+      "collateral_not_ready"
     );
+  });
+
+  it("submits through the SDK adapter once minimal gates pass", async () => {
+    const result = await submitViaSdkFirstAdapter(
+      { intent, signedOrder, idempotencyKey: "client-123" },
+      {
+        checkCollateralReadiness: collateralReady,
+        credentials,
+        env: env(),
+        readMarketBySlug,
+        sdkPostOrder: async () => ({
+          success: true,
+          orderID: "order-123",
+          status: "live"
+        })
+      }
+    );
+
+    expect(result.status).toBe("submitted");
+    expect(result.status === "submitted" ? result.orderId : null).toBe("order-123");
   });
 
   it("redacts diagnostics before returning audit-safe metadata", () => {
