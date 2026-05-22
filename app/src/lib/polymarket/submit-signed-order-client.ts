@@ -7,6 +7,7 @@ export type SubmitSignedOrderClientResult =
       status: "blocked" | "failed";
       code: string;
       message: string;
+      diagnostics?: Record<string, unknown>;
     };
 
 export async function submitSignedPolymarketOrderClient(

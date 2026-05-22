@@ -19,12 +19,31 @@ const serverEnvSchema = z.object({
     .enum(["true", "false"])
     .default("false")
     .transform((value) => value === "true"),
+  POLYMARKET_LIVE_SUBMIT_ENABLED: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
+  POLYMARKET_LIVE_TRADING_KILL_SWITCH: z
+    .enum(["true", "false"])
+    .default("true")
+    .transform((value) => value === "true"),
   POLYMARKET_DRY_RUN_ENABLED: z
     .enum(["true", "false"])
     .default("false")
     .transform((value) => value === "true"),
   POLYMARKET_BUILDER_CODE: z.string().optional(),
   POLYMARKET_OPERATOR_CONFIRM_LIVE_TRADING: z.string().optional(),
+  POLYMARKET_REQUIRE_L2_CREDENTIALS: z
+    .enum(["true", "false"])
+    .default("true")
+    .transform((value) => value === "true"),
+  POLYMARKET_REQUIRE_BUILDER_CODE: z
+    .enum(["true", "false"])
+    .default("true")
+    .transform((value) => value === "true"),
+  POLYMARKET_CHAIN_ID: z.coerce.number().int().positive().default(137),
+  POLYMARKET_MAX_ORDER_NOTIONAL_USD: z.coerce.number().positive().default(10),
+  POLYMARKET_SIGNER_HEALTH_STATUS: z.enum(["ok", "down"]).default("ok"),
   POLYMARKET_OFFICIAL_FUNDING_URL: z
     .string()
     .url()
@@ -49,6 +68,9 @@ const serverEnvSchema = z.object({
   CLOB_SECRET: z.string().optional(),
   CLOB_PASS_PHRASE: z.string().optional(),
   CLOB_API_URL: z.string().url().optional(),
+  POLYMARKET_CLOB_API_KEY: z.string().optional(),
+  POLYMARKET_CLOB_API_SECRET: z.string().optional(),
+  POLYMARKET_CLOB_API_PASSPHRASE: z.string().optional(),
   POLYGON_RPC_URL: z.string().url().optional(),
   PUSD_ADDRESS: z.string().optional(),
   DEPOSIT_WALLET_FACTORY_ADDRESS: z.string().optional(),
@@ -64,10 +86,22 @@ export function getServerEnv(): ServerEnv {
     POLYMARKET_DATA_API_BASE_URL: process.env.POLYMARKET_DATA_API_BASE_URL,
     POLYMARKET_MARKET_CACHE_TTL_MS: process.env.POLYMARKET_MARKET_CACHE_TTL_MS,
     POLYMARKET_PUBLIC_LIVE_ENABLED: process.env.POLYMARKET_PUBLIC_LIVE_ENABLED,
+    POLYMARKET_LIVE_SUBMIT_ENABLED: process.env.POLYMARKET_LIVE_SUBMIT_ENABLED,
+    POLYMARKET_LIVE_TRADING_KILL_SWITCH:
+      process.env.POLYMARKET_LIVE_TRADING_KILL_SWITCH,
     POLYMARKET_DRY_RUN_ENABLED: process.env.POLYMARKET_DRY_RUN_ENABLED,
     POLYMARKET_BUILDER_CODE: process.env.POLYMARKET_BUILDER_CODE,
     POLYMARKET_OPERATOR_CONFIRM_LIVE_TRADING:
       process.env.POLYMARKET_OPERATOR_CONFIRM_LIVE_TRADING,
+    POLYMARKET_REQUIRE_L2_CREDENTIALS:
+      process.env.POLYMARKET_REQUIRE_L2_CREDENTIALS,
+    POLYMARKET_REQUIRE_BUILDER_CODE:
+      process.env.POLYMARKET_REQUIRE_BUILDER_CODE,
+    POLYMARKET_CHAIN_ID: process.env.POLYMARKET_CHAIN_ID,
+    POLYMARKET_MAX_ORDER_NOTIONAL_USD:
+      process.env.POLYMARKET_MAX_ORDER_NOTIONAL_USD,
+    POLYMARKET_SIGNER_HEALTH_STATUS:
+      process.env.POLYMARKET_SIGNER_HEALTH_STATUS,
     POLYMARKET_OFFICIAL_FUNDING_URL: process.env.POLYMARKET_OFFICIAL_FUNDING_URL,
     POLYMARKET_COLLATERAL_SETUP_ENABLED:
       process.env.POLYMARKET_COLLATERAL_SETUP_ENABLED,
@@ -82,6 +116,10 @@ export function getServerEnv(): ServerEnv {
     CLOB_SECRET: process.env.CLOB_SECRET,
     CLOB_PASS_PHRASE: process.env.CLOB_PASS_PHRASE,
     CLOB_API_URL: process.env.CLOB_API_URL,
+    POLYMARKET_CLOB_API_KEY: process.env.POLYMARKET_CLOB_API_KEY,
+    POLYMARKET_CLOB_API_SECRET: process.env.POLYMARKET_CLOB_API_SECRET,
+    POLYMARKET_CLOB_API_PASSPHRASE:
+      process.env.POLYMARKET_CLOB_API_PASSPHRASE,
     POLYGON_RPC_URL: process.env.POLYGON_RPC_URL,
     PUSD_ADDRESS: process.env.PUSD_ADDRESS,
     DEPOSIT_WALLET_FACTORY_ADDRESS: process.env.DEPOSIT_WALLET_FACTORY_ADDRESS,

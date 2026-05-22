@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createLiveClobTradingAdapter } from "@/lib/polymarket/adapters/live-clob-adapter";
-import { validatePolymarketOrderIntent } from "@/lib/polymarket/order-validation";
+import { NO_STORE_HEADERS } from "@/lib/polymarket/cache-headers";
 import { submitSignedOrderRequestSchema } from "@/lib/polymarket/submit-signed-order-request";
 
 export async function POST(request: Request) {
@@ -14,27 +14,15 @@ export async function POST(request: Request) {
         code: "invalid_submit_payload",
         message: "Submit payload failed validation."
       },
-      { status: 400 }
-    );
-  }
-
-  const validation = validatePolymarketOrderIntent(parsed.data.intent);
-
-  if (!validation.ok) {
-    return NextResponse.json(
-      {
-        status: "blocked",
-        code: validation.code,
-        message: validation.message
-      },
-      { status: 403 }
+      { status: 400, headers: NO_STORE_HEADERS }
     );
   }
 
   const adapter = createLiveClobTradingAdapter();
-  const result = await adapter.submitSignedOrder(parsed.data.signedOrder);
+  const result = await adapter.submitSignedOrder(parsed.data);
 
   return NextResponse.json(result, {
+    headers: NO_STORE_HEADERS,
     status: result.status === "submitted" ? 200 : 403
   });
 }

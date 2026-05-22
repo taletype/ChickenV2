@@ -1,45 +1,41 @@
 import "server-only";
-import { getServerEnv } from "@/lib/env/server-env";
+import {
+  evaluatePolymarketLiveTradingReadiness,
+  type LiveTradingBlockerCode,
+  type LiveTradingReadiness,
+  type LiveTradingReadinessInput
+} from "./liveTradingReadiness";
 
 export type LiveSubmitGuardResult =
   | {
       ok: true;
+      readiness: Extract<LiveTradingReadiness, { status: "ready" }>;
     }
   | {
       ok: false;
-      code:
-        | "live_disabled"
-        | "operator_confirmation_missing"
-        | "builder_code_missing";
+      code: LiveTradingBlockerCode;
       message: string;
+      readiness: Extract<LiveTradingReadiness, { status: "blocked" }>;
     };
 
-export function assertLiveSubmitGuards(): LiveSubmitGuardResult {
-  const env = getServerEnv();
+export function assertLiveSubmitGuards(
+  input: LiveTradingReadinessInput = {}
+): LiveSubmitGuardResult {
+  const liveTradingReadiness = evaluatePolymarketLiveTradingReadiness(input);
 
-  if (!env.POLYMARKET_PUBLIC_LIVE_ENABLED) {
-    return {
-      ok: false,
-      code: "live_disabled",
-      message: "Live trading is disabled."
-    };
+  if (liveTradingReadiness.status === "ready") {
+    return { ok: true, readiness: liveTradingReadiness };
   }
 
-  if (env.POLYMARKET_OPERATOR_CONFIRM_LIVE_TRADING !== "I_UNDERSTAND_REAL_ORDERS") {
-    return {
-      ok: false,
-      code: "operator_confirmation_missing",
-      message: "Operator live-trading confirmation is missing."
-    };
-  }
+  const firstBlocker = liveTradingReadiness.blockers[0] ?? {
+    code: "invalid_order" as const,
+    message: "Order failed server validation."
+  };
 
-  if (!env.POLYMARKET_BUILDER_CODE) {
-    return {
-      ok: false,
-      code: "builder_code_missing",
-      message: "Builder code is missing."
-    };
-  }
-
-  return { ok: true };
+  return {
+    ok: false,
+    code: firstBlocker.code,
+    message: firstBlocker.message,
+    readiness: liveTradingReadiness
+  };
 }

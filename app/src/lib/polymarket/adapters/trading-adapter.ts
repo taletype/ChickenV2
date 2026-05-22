@@ -1,7 +1,8 @@
 import type { SubmitSignedOrderClientResult } from "../submit-signed-order-client";
+import type { SubmitSignedOrderRequest } from "../submit-signed-order-request";
 
 export type TradingAdapter = {
   submitSignedOrder(
-    signedOrder: Record<string, unknown> | undefined
+    request: SubmitSignedOrderRequest
   ): Promise<SubmitSignedOrderClientResult>;
 };
