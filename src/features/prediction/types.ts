@@ -65,6 +65,29 @@ export type PredictionChartViewModel = {
   error: string | null;
 };
 
+export type PredictionTradeReadinessState = "ready" | "blocked" | "unavailable";
+
+export type PredictionTradeReadinessCheckId =
+  | "wallet_connected"
+  | "polygon_chain"
+  | "market_tradable"
+  | "token_outcome_valid"
+  | "deposit_wallet_known_deployed"
+  | "pusd_balance_real"
+  | "clob_balance_real"
+  | "clob_allowance_ready"
+  | "l2_credentials_available"
+  | "signer_identity_valid"
+  | "live_trading_flag"
+  | "submit_adapter_configured";
+
+export type PredictionTradeReadinessCheck = {
+  id: PredictionTradeReadinessCheckId;
+  label: string;
+  state: PredictionTradeReadinessState;
+  detail: string;
+};
+
 export type PredictionTradeTicketViewModel = {
   status: "disabled" | "ready";
   marketSlug: string;
@@ -74,18 +97,37 @@ export type PredictionTradeTicketViewModel = {
   price: number | null;
   size: number | null;
   disabledReason: string | null;
+  readiness: {
+    checks: PredictionTradeReadinessCheck[];
+    liveTradingEnabled: boolean;
+    submitAdapterConfigured: boolean;
+  };
   funding:
     | {
         status: "ready";
         step: "ready";
         topUpReady: true;
         canSubmitLiveOrder: boolean;
+        depositWalletKnown: boolean;
+        depositWalletDeployed: boolean;
+        pusdBalanceReal: boolean;
+        clobBalanceReal: boolean;
+        clobBalanceReady: boolean;
+        clobAllowanceReady: boolean;
+        l2CredentialsAvailable: boolean;
       }
     | {
         status: "blocked";
         step: string;
         topUpReady: false;
         canSubmitLiveOrder: false;
+        depositWalletKnown: boolean;
+        depositWalletDeployed: boolean;
+        pusdBalanceReal: boolean;
+        clobBalanceReal: boolean;
+        clobBalanceReady: boolean;
+        clobAllowanceReady: boolean;
+        l2CredentialsAvailable: boolean;
       };
 };
 

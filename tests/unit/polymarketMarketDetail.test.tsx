@@ -16,6 +16,10 @@ vi.mock("@/hooks/use-wallet-connection-state", () => ({
   })
 }));
 
+vi.mock("wagmi", () => ({
+  useWalletClient: () => ({ data: null })
+}));
+
 describe("market detail adapter", () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -91,11 +95,23 @@ describe("market detail adapter", () => {
           price: 0.64,
           size: null,
           disabledReason: "connect_wallet",
+          readiness: {
+            checks: [],
+            liveTradingEnabled: false,
+            submitAdapterConfigured: false
+          },
           funding: {
             status: "blocked",
             step: "connect_wallet",
             topUpReady: false,
-            canSubmitLiveOrder: false
+            canSubmitLiveOrder: false,
+            depositWalletKnown: false,
+            depositWalletDeployed: false,
+            pusdBalanceReal: false,
+            clobBalanceReal: false,
+            clobBalanceReady: false,
+            clobAllowanceReady: false,
+            l2CredentialsAvailable: false
           }
         }}
         locale="en"

@@ -122,11 +122,14 @@ describe("V2 live submit safety architecture", () => {
       { credentials, env: env(), readMarketBySlug }
     );
 
-    expect(result.status).toBe("ready");
+      expect(result.status).toBe("ready");
     if (result.status === "ready") {
       expect(result.canonical.market.id).toBe(market.id);
       expect(result.canonical.outcome.tokenId).toBe("123");
-      expect(result.order.tokenID).toBe("123");
+      expect(result.order.tokenId).toBe("123");
+      expect(result.order).not.toHaveProperty("signature");
+      expect(result.typedData.primaryType).toBe("Order");
+      expect(result.requiresSignature).toBe(true);
     }
   });
 
@@ -138,6 +141,16 @@ describe("V2 live submit safety architecture", () => {
 
     expect(result.status).toBe("blocked");
     expect(result.status === "blocked" ? result.code : null).toBe("invalid_market_token");
+  });
+
+  it("blocks wrong-chain readiness before preparing a signing payload", async () => {
+    const result = await prepareSignedPolymarketOrder(
+      { intent: { ...intent, walletChainId: 1 } },
+      { credentials, env: env(), readMarketBySlug }
+    );
+
+    expect(result.status).toBe("blocked");
+    expect(result.status === "blocked" ? result.code : null).toBe("wrong_chain");
   });
 
   it("blocks missing L2 credentials", async () => {

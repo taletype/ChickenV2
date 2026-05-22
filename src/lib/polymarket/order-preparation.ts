@@ -4,8 +4,8 @@ import type { ServerEnv } from "@/lib/env/server-env";
 import { deriveTradingWalletContext } from "@/lib/wallet/trading-wallet-context";
 import type { TradingWalletContext } from "@/lib/wallet/trading-wallet-context";
 import {
-  buildPolymarketUnsignedOrder,
-  type PolymarketUnsignedOrder
+  buildSignablePolymarketOrderDraft,
+  type SignablePolymarketOrderDraft
 } from "./order-builder";
 import {
   getPolymarketL2CredentialReadiness,
@@ -62,9 +62,13 @@ export type PreparedPolymarketOrder =
         outcome: PolymarketOutcome;
       };
       intent: PolymarketOrderIntent;
-      order: PolymarketUnsignedOrder;
+      order: SignablePolymarketOrderDraft["order"];
+      orderType: SignablePolymarketOrderDraft["orderType"];
       readiness: Extract<LiveTradingReadiness, { status: "ready" }>;
       requiresSignature: true;
+      sdkSignatureSuffix: string;
+      tickSize: SignablePolymarketOrderDraft["tickSize"];
+      typedData: SignablePolymarketOrderDraft["typedData"];
       diagnostics: Record<string, unknown>;
     }
   | {
@@ -339,6 +343,53 @@ export async function prepareSignedPolymarketOrder(
     });
   }
 
+  const builderCode = options.env?.POLYMARKET_BUILDER_CODE?.trim();
+  if (!builderCode) {
+    const attempt = await createBlockedAttempt({
+      code: "builder_code_missing",
+      diagnostics: {
+        phase: options.phase ?? "prepare",
+        tokenId: validation.intent.tokenId
+      },
+      intent: validation.intent,
+      options
+    });
+    return blocked({
+      attempt,
+      code: "builder_code_missing",
+      message: "Builder code is missing.",
+      diagnostics: attempt.diagnostics
+    });
+  }
+
+  let signableDraft: SignablePolymarketOrderDraft;
+  try {
+    signableDraft = await buildSignablePolymarketOrderDraft({
+      builderCode,
+      chainId: options.env?.POLYMARKET_CHAIN_ID ?? 137,
+      clobHost: options.env?.POLYMARKET_CLOB_API_BASE_URL,
+      intent: validation.intent,
+      negRisk: canonical.market.negRisk,
+      walletContext
+    });
+  } catch {
+    const attempt = await createBlockedAttempt({
+      code: "signing_payload_unavailable",
+      diagnostics: {
+        phase: options.phase ?? "prepare",
+        tokenId: validation.intent.tokenId
+      },
+      intent: validation.intent,
+      options
+    });
+    return blocked({
+      attempt,
+      code: "signing_payload_unavailable",
+      message: "Browser signing payload could not be prepared safely.",
+      diagnostics: attempt.diagnostics
+    });
+  }
+
   const attempt = await createPolymarketOrderAttempt(
     {
       walletAddress: walletContext.ownerAddress,
@@ -379,9 +430,13 @@ export async function prepareSignedPolymarketOrder(
       outcome: canonical.outcome
     },
     intent: validation.intent,
-    order: buildPolymarketUnsignedOrder(validation.intent),
+    order: signableDraft.order,
+    orderType: signableDraft.orderType,
     readiness,
     requiresSignature: true as const,
+    sdkSignatureSuffix: signableDraft.sdkSignatureSuffix,
+    tickSize: signableDraft.tickSize,
+    typedData: signableDraft.typedData,
     diagnostics
   };
 
