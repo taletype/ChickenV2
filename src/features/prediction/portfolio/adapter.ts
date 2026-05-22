@@ -3,11 +3,17 @@ import { derivePnlSnapshot } from "@/lib/polymarket/analytics/pnl";
 import { listPolymarketPositions } from "@/lib/polymarket/analytics/positions";
 import { resolveWalletAccount } from "@/lib/wallet/account";
 import type { PredictionPortfolioViewModel } from "../types";
+import {
+  buildAccountActivityViewModel,
+  buildAccountOpenOrdersViewModel
+} from "../activity/adapter";
 
 export async function buildPortfolioViewModel(options: {
   address?: string | null;
 }): Promise<PredictionPortfolioViewModel> {
   const account = resolveWalletAccount(options.address);
+  const accountActivity = buildAccountActivityViewModel();
+  const openOrders = buildAccountOpenOrdersViewModel();
 
   if (account.status !== "connected") {
     return {
@@ -19,6 +25,8 @@ export async function buildPortfolioViewModel(options: {
         status: "unavailable",
         reason: "wallet_disconnected"
       },
+      accountActivity,
+      openOrders,
       error: null
     };
   }
@@ -35,6 +43,8 @@ export async function buildPortfolioViewModel(options: {
       positions,
       fills,
       pnl: derivePnlSnapshot(positions),
+      accountActivity,
+      openOrders,
       error: null
     };
   } catch (error) {
@@ -47,6 +57,8 @@ export async function buildPortfolioViewModel(options: {
         status: "unavailable",
         reason: "upstream_unavailable"
       },
+      accountActivity,
+      openOrders,
       error: error instanceof Error ? error.message : "portfolio_unavailable"
     };
   }

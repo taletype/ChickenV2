@@ -105,6 +105,22 @@ describe("market detail adapter", () => {
     expect(screen.getAllByText("Will detail page use adapter data?").length).toBeGreaterThan(0);
     expect(screen.getByText("Rules text from Gamma")).toBeInTheDocument();
     expect(screen.getAllByText("Token available").length).toBe(2);
+    expect(screen.getByRole("button", { name: "Discussion" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Activity" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Open orders" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Discussion" }));
+
+    expect(screen.getByText("Discussion unavailable")).toBeInTheDocument();
+    expect(screen.getByText("V2 has not connected a server-owned discussion backend for this market.")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Activity" }));
+
+    expect(screen.getByText("Market activity unavailable")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Open orders" }));
+
+    expect(screen.getByText("Open orders unavailable")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Market details" }));
 

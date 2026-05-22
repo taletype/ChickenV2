@@ -6,9 +6,18 @@ import type {
   PredictionMarketCardViewModel,
   PredictionMarketDetailViewModel
 } from "@/features/prediction/types";
+import { ActivityPanel } from "./activity/activity-panel";
+import { OpenOrdersPanel } from "./activity/open-orders-panel";
+import { DiscussionPanel } from "./discussion/discussion-panel";
 
 type DetailMetadata = NonNullable<PredictionMarketDetailViewModel["metadata"]>;
-type DetailTab = "rules" | "metadata" | "resolution";
+type DetailTab =
+  | "rules"
+  | "discussion"
+  | "activity"
+  | "openOrders"
+  | "metadata"
+  | "resolution";
 
 function isZh(locale?: string) {
   return locale?.toLowerCase().startsWith("zh") ?? false;
@@ -63,6 +72,9 @@ function resolveTabs(locale?: string): Array<{ id: DetailTab; label: string }> {
   if (isZh(locale)) {
     return [
       { id: "rules", label: "規則" },
+      { id: "discussion", label: "討論" },
+      { id: "activity", label: "活動" },
+      { id: "openOrders", label: "掛單" },
       { id: "metadata", label: "市場資料" },
       { id: "resolution", label: "結算" }
     ];
@@ -70,6 +82,9 @@ function resolveTabs(locale?: string): Array<{ id: DetailTab; label: string }> {
 
   return [
     { id: "rules", label: "Rules" },
+    { id: "discussion", label: "Discussion" },
+    { id: "activity", label: "Activity" },
+    { id: "openOrders", label: "Open orders" },
     { id: "metadata", label: "Market details" },
     { id: "resolution", label: "Resolution" }
   ];
@@ -299,11 +314,17 @@ export function MarketDetailTabs({
   market,
   description,
   metadata,
+  discussion,
+  activity,
+  openOrders,
   locale
 }: {
   market: PredictionMarketCardViewModel;
   description: string | null;
   metadata: DetailMetadata | null;
+  discussion: PredictionMarketDetailViewModel["discussion"];
+  activity: PredictionMarketDetailViewModel["activity"];
+  openOrders: PredictionMarketDetailViewModel["openOrders"];
   locale?: string;
 }) {
   const tabs = resolveTabs(locale);
@@ -344,6 +365,15 @@ export function MarketDetailTabs({
       <div className="py-4">
         {selectedTab === "rules" ? (
           <RulesPanel description={description} locale={locale} />
+        ) : null}
+        {selectedTab === "discussion" ? (
+          <DiscussionPanel discussion={discussion} locale={locale} />
+        ) : null}
+        {selectedTab === "activity" ? (
+          <ActivityPanel activity={activity} locale={locale} />
+        ) : null}
+        {selectedTab === "openOrders" ? (
+          <OpenOrdersPanel openOrders={openOrders} locale={locale} />
         ) : null}
         {selectedTab === "metadata" ? (
           <MetadataPanel market={market} metadata={metadata} locale={locale} />

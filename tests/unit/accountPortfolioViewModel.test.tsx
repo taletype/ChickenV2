@@ -37,6 +37,20 @@ function readyEmptyPortfolio(): PredictionPortfolioViewModel {
       status: "available",
       totalCurrentValue: 0
     },
+    accountActivity: {
+      status: "unavailable",
+      scope: "account",
+      records: [],
+      reason: "activity_backend_not_configured",
+      error: null
+    },
+    openOrders: {
+      status: "unavailable",
+      scope: "account",
+      orders: [],
+      reason: "open_orders_backend_not_configured",
+      error: null
+    },
     error: null
   };
 }
@@ -70,6 +84,8 @@ describe("account portfolio view model", () => {
     expect(vm.status).toBe("disconnected");
     expect(vm.positions).toEqual([]);
     expect(vm.fills).toEqual([]);
+    expect(vm.accountActivity.records).toEqual([]);
+    expect(vm.openOrders.orders).toEqual([]);
     expect(vm.pnl.status).toBe("unavailable");
   });
 });
@@ -124,8 +140,12 @@ describe("portfolio account shell", () => {
     expect(screen.getByText("No real fills returned")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Open orders" }));
-    expect(screen.getByText("No open orders loaded")).toBeInTheDocument();
-    expect(screen.getByText("V2 has no real open-orders adapter wired here, so it does not display inferred orders.")).toBeInTheDocument();
+    expect(screen.getByText("Open orders unavailable")).toBeInTheDocument();
+    expect(screen.getByText("V2 has no verified open-orders adapter wired here.")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Activity" }));
+    expect(screen.getByText("Account activity unavailable")).toBeInTheDocument();
+    expect(screen.getByText("V2 has no verified activity adapter wired here.")).toBeInTheDocument();
   });
 
   it("renders wrong-chain portfolio and funding states without enabling top-up", async () => {

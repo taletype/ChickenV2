@@ -51,6 +51,9 @@ export type PredictionMarketDetailViewModel = {
     resolutionSource: string | null;
     resolutionSourceUrl: string | null;
   } | null;
+  discussion: PredictionDiscussionViewModel;
+  activity: PredictionActivityViewModel;
+  openOrders: PredictionOpenOrdersViewModel;
   freshness: DataFreshness;
   error: string | null;
 };
@@ -112,5 +115,80 @@ export type PredictionPortfolioViewModel = {
         status: "unavailable";
         reason: string;
       };
+  accountActivity: PredictionActivityViewModel;
+  openOrders: PredictionOpenOrdersViewModel;
+  error: string | null;
+};
+
+export type PredictionDiscussionReply = {
+  id: string;
+  authorLabel: string | null;
+  authorAddress: string | null;
+  body: string;
+  createdAt: string | null;
+  likesCount: number | null;
+  viewerHasLiked: boolean | null;
+};
+
+export type PredictionDiscussionComment = {
+  id: string;
+  authorLabel: string | null;
+  authorAddress: string | null;
+  body: string;
+  createdAt: string | null;
+  likesCount: number | null;
+  repliesCount: number | null;
+  viewerHasLiked: boolean | null;
+  canDelete: boolean;
+  canReport: boolean;
+  replies: PredictionDiscussionReply[];
+};
+
+export type PredictionDiscussionViewModel = {
+  status: "unavailable" | "empty" | "ready";
+  marketSlug: string;
+  comments: PredictionDiscussionComment[];
+  reason: string | null;
+  error: string | null;
+};
+
+export type PredictionActivityRecord = {
+  id: string;
+  market: string | null;
+  side: string | null;
+  outcome: string | null;
+  price: number | null;
+  size: number | null;
+  totalValue: number | null;
+  timestamp: string | null;
+  actorLabel: string | null;
+  transactionUrl: string | null;
+};
+
+export type PredictionActivityViewModel = {
+  status: "unavailable" | "empty" | "ready";
+  scope: "market" | "account";
+  records: PredictionActivityRecord[];
+  reason: string | null;
+  error: string | null;
+};
+
+export type PredictionOpenOrderRecord = {
+  id: string;
+  market: string | null;
+  side: string | null;
+  outcome: string | null;
+  price: number | null;
+  size: number | null;
+  filledSize: number | null;
+  expiration: string | null;
+  status: string | null;
+};
+
+export type PredictionOpenOrdersViewModel = {
+  status: "unavailable" | "empty" | "ready";
+  scope: "market" | "account";
+  orders: PredictionOpenOrderRecord[];
+  reason: string | null;
   error: string | null;
 };

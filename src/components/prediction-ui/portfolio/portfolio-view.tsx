@@ -1,12 +1,10 @@
 "use client";
 
 import {
-  Activity,
   Ban,
   CheckCircle2,
   ClipboardCheck,
   Copy,
-  ListOrdered,
   ReceiptText,
   ShieldCheck,
   TriangleAlert,
@@ -18,6 +16,9 @@ import type { PredictionPortfolioViewModel } from "@/features/prediction/types";
 import { useWalletConnectionState } from "@/hooks/use-wallet-connection-state";
 import type { WalletConnectionViewState } from "@/lib/wallet/appkit";
 import { SUPPORTED_WALLET_CHAIN_NAME } from "@/lib/wallet/appkit";
+import { ActivityPanel } from "../activity/activity-panel";
+import { FillsPanel } from "../activity/fills-panel";
+import { OpenOrdersPanel } from "../activity/open-orders-panel";
 import { FundingPanelContent } from "../funding/funding-panel";
 import { StatusBanner } from "../status-banner";
 
@@ -25,12 +26,13 @@ type FundingPanelViewModel = Awaited<ReturnType<
   typeof import("@/features/prediction/funding/adapter").buildFundingPanelViewModel
 >>;
 
-type PortfolioTab = "positions" | "fills" | "orders";
+type PortfolioTab = "positions" | "fills" | "orders" | "activity";
 
 const portfolioTabs = [
   { id: "positions", label: "Positions" },
   { id: "fills", label: "Fills" },
-  { id: "orders", label: "Open orders" }
+  { id: "orders", label: "Open orders" },
+  { id: "activity", label: "Activity" }
 ] satisfies Array<{ id: PortfolioTab; label: string }>;
 
 function isZh(locale?: string) {
@@ -61,33 +63,6 @@ function formatNumber(value: number) {
   return new Intl.NumberFormat("en", {
     maximumFractionDigits: 4
   }).format(value);
-}
-
-function formatPrice(value: number) {
-  if (value >= 0 && value <= 1) {
-    return `${(value * 100).toLocaleString("en", {
-      maximumFractionDigits: 1
-    })}c`;
-  }
-
-  return formatCurrency(value);
-}
-
-function formatTimestamp(value: string | null) {
-  if (!value) {
-    return "--";
-  }
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-
-  return date.toLocaleDateString("en", {
-    month: "short",
-    day: "numeric",
-    year: "numeric"
-  });
 }
 
 function getOutcomeTone(outcome: string) {
@@ -149,20 +124,11 @@ function emptyCopy({
   walletState,
   locale
 }: {
-  kind: PortfolioTab;
+  kind: "positions" | "fills";
   portfolio: PredictionPortfolioViewModel;
   walletState: WalletConnectionViewState;
   locale?: string;
 }) {
-  if (kind === "orders") {
-    return {
-      title: isZh(locale) ? "未載入真實掛單" : "No open orders loaded",
-      description: isZh(locale)
-        ? "V2 尚未接入真實 open orders adapter，所以不會顯示推測掛單。"
-        : "V2 has no real open-orders adapter wired here, so it does not display inferred orders."
-    };
-  }
-
   if (walletState.status === "unsupported_chain") {
     return {
       title: isZh(locale) ? "請切換至 Polygon" : "Switch to Polygon",
@@ -421,7 +387,9 @@ export function PortfolioViewContent({
                         ? portfolio.positions.length
                         : tab.id === "fills"
                           ? portfolio.fills.length
-                          : null
+                          : tab.id === "activity" && portfolio.accountActivity.status === "ready"
+                            ? portfolio.accountActivity.records.length
+                            : null
                     }
                   >
                     {tab.label}
@@ -435,8 +403,10 @@ export function PortfolioViewContent({
               <PositionsTable portfolio={portfolio} walletState={walletState} locale={locale} />
             ) : activeTab === "fills" ? (
               <FillsTable portfolio={portfolio} walletState={walletState} locale={locale} />
+            ) : activeTab === "orders" ? (
+              <OpenOrdersPanel openOrders={portfolio.openOrders} locale={locale} />
             ) : (
-              <OpenOrdersTable portfolio={portfolio} walletState={walletState} locale={locale} />
+              <ActivityPanel activity={portfolio.accountActivity} locale={locale} />
             )}
           </section>
 
@@ -622,96 +592,15 @@ function FillsTable({
   walletState: WalletConnectionViewState;
   locale?: string;
 }) {
-  const hasFills = portfolio.fills.length > 0;
   const copy = emptyCopy({ kind: "fills", portfolio, walletState, locale });
 
   return (
-    <div className="relative w-full overflow-x-auto">
-      <table className="w-full min-w-[920px] table-fixed border-collapse">
-        <thead>
-          <tr className="border-b border-[var(--border)]">
-            <TableHeader className="w-[38%] text-left">{isZh(locale) ? "市場" : "Market"}</TableHeader>
-            <TableHeader className="w-[12%] text-center">{isZh(locale) ? "方向" : "Side"}</TableHeader>
-            <TableHeader className="w-[16%] text-left">{isZh(locale) ? "結果" : "Outcome"}</TableHeader>
-            <TableHeader className="w-[12%] text-right">{isZh(locale) ? "價格" : "Price"}</TableHeader>
-            <TableHeader className="w-[12%] text-right">{isZh(locale) ? "數量" : "Size"}</TableHeader>
-            <TableHeader className="w-[10%] text-right">{isZh(locale) ? "時間" : "Time"}</TableHeader>
-          </tr>
-        </thead>
-        {hasFills ? (
-          <tbody className="divide-y divide-[var(--border)]">
-            {portfolio.fills.map((fill) => (
-              <tr
-                key={`${fill.market}-${fill.outcome}-${fill.timestamp ?? fill.price}`}
-                className="transition-colors hover:bg-[var(--muted)]"
-              >
-                <td className="max-w-0 px-3 py-3 align-middle">
-                  <div className="truncate text-sm font-semibold text-[var(--foreground)]">
-                    {fill.market}
-                  </div>
-                </td>
-                <td className="px-3 py-3 text-center text-sm font-semibold">
-                  {fill.side}
-                </td>
-                <td className="px-3 py-3 text-left align-middle">
-                  <OutcomeBadge label={fill.outcome} tone={getOutcomeTone(fill.outcome)} />
-                </td>
-                <td className="px-3 py-3 text-right text-sm font-semibold tabular-nums">
-                  {formatPrice(fill.price)}
-                </td>
-                <td className="px-3 py-3 text-right text-sm font-semibold tabular-nums">
-                  {formatNumber(fill.size)}
-                </td>
-                <td className="px-3 py-3 text-right text-xs font-medium text-[var(--muted-foreground)]">
-                  {formatTimestamp(fill.timestamp)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        ) : null}
-      </table>
-      {!hasFills ? (
-        <TableEmptyState
-          icon={<Activity className="size-5" aria-hidden="true" />}
-          title={copy.title}
-          description={copy.description}
-        />
-      ) : null}
-    </div>
-  );
-}
-
-function OpenOrdersTable({
-  portfolio,
-  walletState,
-  locale
-}: {
-  portfolio: PredictionPortfolioViewModel;
-  walletState: WalletConnectionViewState;
-  locale?: string;
-}) {
-  const copy = emptyCopy({ kind: "orders", portfolio, walletState, locale });
-
-  return (
-    <div className="relative w-full overflow-x-auto">
-      <table className="w-full min-w-[860px] table-fixed border-collapse">
-        <thead>
-          <tr className="border-b border-[var(--border)]">
-            <TableHeader className="w-[34%] text-left">{isZh(locale) ? "市場" : "Market"}</TableHeader>
-            <TableHeader className="w-[12%] text-center">{isZh(locale) ? "方向" : "Side"}</TableHeader>
-            <TableHeader className="w-[16%] text-left">{isZh(locale) ? "結果" : "Outcome"}</TableHeader>
-            <TableHeader className="w-[12%] text-right">{isZh(locale) ? "價格" : "Price"}</TableHeader>
-            <TableHeader className="w-[12%] text-right">{isZh(locale) ? "數量" : "Size"}</TableHeader>
-            <TableHeader className="w-[14%] text-right">{isZh(locale) ? "狀態" : "Status"}</TableHeader>
-          </tr>
-        </thead>
-      </table>
-      <TableEmptyState
-        icon={<ListOrdered className="size-5" aria-hidden="true" />}
-        title={copy.title}
-        description={copy.description}
-      />
-    </div>
+    <FillsPanel
+      fills={portfolio.fills}
+      emptyTitle={copy.title}
+      emptyDescription={copy.description}
+      locale={locale}
+    />
   );
 }
 

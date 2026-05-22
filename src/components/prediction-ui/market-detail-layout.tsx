@@ -55,6 +55,9 @@ export function MarketDetailLayout({
             market={detail.market}
             description={detail.description}
             metadata={detail.metadata}
+            discussion={detail.discussion}
+            activity={detail.activity}
+            openOrders={detail.openOrders}
             locale={locale}
           />
         </div>
