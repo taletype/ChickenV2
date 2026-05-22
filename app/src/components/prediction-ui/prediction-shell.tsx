@@ -6,6 +6,7 @@ import {
   Sparkles,
   TrendingUp
 } from "lucide-react";
+import { Suspense } from "react";
 import { Link } from "@/i18n/navigation";
 import { WalletConnectButton } from "./wallet-connect-button";
 import { WalletRouteSync } from "./wallet-route-sync";
@@ -19,7 +20,9 @@ export function PredictionShell({
 }) {
   return (
     <div className="min-h-screen pb-[72px] lg:pb-0">
-      <WalletRouteSync />
+      <Suspense fallback={null}>
+        <WalletRouteSync />
+      </Suspense>
       <header className="sticky top-0 z-30 bg-[var(--background)]">
         <div className="app-container relative z-50 flex min-h-[60px] w-full items-center justify-between gap-2 py-3 pb-1 md:min-h-[68px] md:gap-4 md:pb-2">
           <Link

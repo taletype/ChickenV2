@@ -6,8 +6,7 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 const nextConfig: NextConfig = {
   turbopack: {
     resolveAlias: {
-      accounts: new URL("./src/lib/wallet/accounts-stub.ts", import.meta.url)
-        .pathname
+      accounts: "./src/lib/wallet/accounts-stub.ts"
     }
   },
   images: {
