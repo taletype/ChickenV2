@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ServerEnv } from "@/lib/env/server-env";
 import { getLiveTopUpEnvStatus } from "@/lib/polymarket/live-topup-env";
+import { buildLiveTopUpFundingSnapshot } from "@/lib/polymarket/live-topup-status";
 
 function env(overrides: Partial<ServerEnv> = {}): ServerEnv {
   return {
@@ -100,5 +101,53 @@ describe("live top-up env validation", () => {
     );
 
     expect(status.status).toBe("ready");
+  });
+
+  it("keeps top-up disabled by default and does not fake balances or status", async () => {
+    const envKeys = [
+      "POLYMARKET_LIVE_TOP_UP_ENABLED",
+      "RELAYER_URL",
+      "POLYGON_RPC_URL",
+      "CLOB_API_KEY",
+      "CLOB_SECRET",
+      "CLOB_PASS_PHRASE",
+      "CLOB_API_URL"
+    ] as const;
+    const previous = Object.fromEntries(
+      envKeys.map((key) => [key, process.env[key]])
+    );
+    process.env.POLYMARKET_LIVE_TOP_UP_ENABLED = "false";
+    for (const key of envKeys.filter((key) => key !== "POLYMARKET_LIVE_TOP_UP_ENABLED")) {
+      delete process.env[key];
+    }
+
+    try {
+      const snapshot = await buildLiveTopUpFundingSnapshot({ address });
+
+      expect(snapshot.env.status).toBe("blocked");
+      expect(snapshot.env.enabled).toBe(false);
+      expect(snapshot.readiness.canSubmitLiveOrder).toBe(false);
+      expect(snapshot.balances.connectedWalletPusd.status).toBe("unavailable");
+      expect(snapshot.balances.connectedWalletPusd.atoms).toBeNull();
+      expect(snapshot.balances.depositWalletPusd.status).toBe("unavailable");
+      expect(snapshot.balances.depositWalletPusd.atoms).toBeNull();
+      expect(snapshot.balances.clob.status).toBe("unavailable");
+      expect(snapshot.balances.clob.balance).toBeNull();
+      expect(snapshot.balances.clob.allowance).toBeNull();
+      expect(snapshot.depositWallet.status).toBe("available");
+      if (snapshot.depositWallet.status === "available") {
+        expect(snapshot.depositWallet.deployed).toBeNull();
+        expect(snapshot.depositWallet.deployedStatus).toBe("unknown");
+      }
+    } finally {
+      for (const key of envKeys) {
+        const value = previous[key];
+        if (value === undefined) {
+          delete process.env[key];
+        } else {
+          process.env[key] = value;
+        }
+      }
+    }
   });
 });

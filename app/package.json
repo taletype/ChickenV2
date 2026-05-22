@@ -19,6 +19,7 @@
     "check:reference-boundaries": "node scripts/check-reference-boundaries.mjs",
     "check:no-fake-market-data": "node scripts/check-no-fake-market-data.mjs",
     "check:live-trading-safety": "node scripts/check-live-trading-safety.mjs",
+    "check:live-topup-safety": "node scripts/check-live-topup-safety.mjs",
     "check:production-env-safety": "node scripts/check-production-env-safety.mjs",
     "check:polymarket-production-data": "node scripts/check-polymarket-production-data.mjs",
     "check:polymarket-collateral-setup-config": "node scripts/check-polymarket-collateral-setup-config.mjs",

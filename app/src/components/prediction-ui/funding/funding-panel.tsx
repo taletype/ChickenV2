@@ -1,3 +1,5 @@
+"use client";
+
 import {
   ArrowUpRight,
   Ban,
@@ -8,10 +10,17 @@ import {
   RotateCw,
   TriangleAlert
 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { useWalletConnectionState } from "@/hooks/use-wallet-connection-state";
+import {
+  SUPPORTED_WALLET_CHAIN_NAME,
+  type WalletConnectionViewState
+} from "@/lib/wallet/appkit";
 
 type FundingPanelViewModel = Awaited<ReturnType<
   typeof import("@/features/prediction/funding/adapter").buildFundingPanelViewModel
 >>;
+type LiveTopUpFundingSnapshot = FundingPanelViewModel["liveTopUp"];
 
 function formatPusd(value: string | null) {
   if (!value) {
@@ -25,6 +34,17 @@ function formatPusd(value: string | null) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   })} pUSD`;
+}
+
+function formatBaseUnits(value: string) {
+  try {
+    const atoms = BigInt(value);
+    const whole = atoms / 1_000_000n;
+    const fractional = atoms % 1_000_000n;
+    return formatPusd(`${whole}.${fractional.toString().padStart(6, "0")}`);
+  } catch {
+    return value;
+  }
 }
 
 function isZh(locale?: string) {
@@ -58,7 +78,68 @@ function readinessLabel(
   return (isZh(locale) ? zh : en)[step];
 }
 
-function checklistLabel(id: FundingPanelViewModel["liveTopUp"]["readiness"]["checklist"][number]["id"], fallback: string, locale?: string) {
+function deployedStatusLabel(
+  status: LiveTopUpFundingSnapshot["depositWallet"],
+  locale?: string
+) {
+  if (status.status !== "available") {
+    return isZh(locale) ? "不可用" : "Unavailable";
+  }
+  if (status.deployedStatus === "deployed") {
+    return isZh(locale) ? "已部署" : "Deployed";
+  }
+  if (status.deployedStatus === "not_deployed") {
+    return isZh(locale) ? "未部署" : "Not deployed";
+  }
+  return isZh(locale) ? "未知" : "Unknown";
+}
+
+function walletStatusLabel(walletState: WalletConnectionViewState, locale?: string) {
+  if (walletState.status === "connected") {
+    return isZh(locale)
+      ? `已連接 ${walletState.label}`
+      : `Connected ${walletState.label}`;
+  }
+  if (walletState.status === "unsupported_chain") {
+    return isZh(locale)
+      ? `錯誤網絡：請切換至 ${SUPPORTED_WALLET_CHAIN_NAME}`
+      : `Wrong network: switch to ${SUPPORTED_WALLET_CHAIN_NAME}`;
+  }
+  if (walletState.status === "connecting") {
+    return isZh(locale) ? "正在連接錢包" : "Connecting wallet";
+  }
+  if (walletState.status === "unconfigured") {
+    return isZh(locale)
+      ? "Wallet Connect 尚未設定"
+      : "Wallet Connect is not configured";
+  }
+  return isZh(locale) ? "未連接錢包" : "No wallet connected";
+}
+
+function approvalSubmitLabel(
+  liveTopUp: LiveTopUpFundingSnapshot,
+  locale?: string
+) {
+  if (liveTopUp.env.status !== "ready") {
+    return isZh(locale)
+      ? "提交已停用：live top-up 閘門未通過"
+      : "Submit disabled: live top-up gates are closed";
+  }
+  if (!liveTopUp.readiness.topUpReady) {
+    return isZh(locale)
+      ? "提交已停用：等待真實充值狀態"
+      : "Submit disabled: waiting for real top-up readiness";
+  }
+  return isZh(locale)
+    ? "提交已停用：瀏覽器簽署尚未接線"
+    : "Submit disabled: browser signing is not wired";
+}
+
+function checklistLabel(
+  id: FundingPanelViewModel["liveTopUp"]["readiness"]["checklist"][number]["id"],
+  fallback: string,
+  locale?: string
+) {
   if (!isZh(locale)) {
     return fallback;
   }
@@ -80,14 +161,36 @@ export function FundingPanel({
   funding: FundingPanelViewModel;
   locale?: string;
 }) {
+  const walletState = useWalletConnectionState();
+
+  return (
+    <FundingPanelContent
+      funding={funding}
+      locale={locale}
+      walletState={walletState}
+    />
+  );
+}
+
+export function FundingPanelContent({
+  funding,
+  locale,
+  walletState
+}: {
+  funding: FundingPanelViewModel;
+  locale?: string;
+  walletState: WalletConnectionViewState;
+}) {
+  const liveTopUp = useLiveTopUpSnapshot(funding.liveTopUp, walletState);
   const method = funding.methods[0] ?? null;
-  const { liveTopUp } = funding;
   const depositWallet =
     liveTopUp.depositWallet.status === "available" ? liveTopUp.depositWallet : null;
   const depositWalletAddress = depositWallet?.depositWalletAddress ?? null;
   const depositPusd = liveTopUp.balances.depositWalletPusd;
   const connectedPusd = liveTopUp.balances.connectedWalletPusd;
   const clob = liveTopUp.balances.clob;
+  const [copied, setCopied] = useState(false);
+  const approvalPreview = liveTopUp.approvalPreview;
 
   return (
     <section className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4 shadow-[var(--panel-shadow)]">
@@ -96,7 +199,22 @@ export function FundingPanel({
         <CircleDollarSign className="size-5 text-[var(--primary)]" aria-hidden="true" />
       </div>
 
-      <div className="mt-4 rounded-md bg-[var(--muted)] p-3">
+      <div
+        className={
+          walletState.status === "unsupported_chain"
+            ? "mt-4 rounded-md border border-[var(--warning)] bg-[color-mix(in_srgb,var(--warning)_10%,white)] p-3"
+            : "mt-4 rounded-md border border-[var(--border)] bg-[var(--muted)] p-3"
+        }
+      >
+        <div className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
+          {isZh(locale) ? "錢包狀態" : "Wallet state"}
+        </div>
+        <div className="mt-1 break-all text-sm font-bold text-[var(--foreground)]">
+          {walletStatusLabel(walletState, locale)}
+        </div>
+      </div>
+
+      <div className="mt-3 rounded-md bg-[var(--muted)] p-3">
         <div className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
           {isZh(locale) ? "充值準備狀態" : "Top-up readiness"}
         </div>
@@ -129,22 +247,24 @@ export function FundingPanel({
             onClick={() => {
               if (depositWalletAddress) {
                 void navigator.clipboard?.writeText(depositWalletAddress);
+                setCopied(true);
+                window.setTimeout(() => setCopied(false), 1200);
               }
             }}
             className="focus-ring inline-flex h-9 flex-1 items-center justify-center gap-2 rounded-md border border-[var(--border)] px-3 text-xs font-bold text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Copy className="size-4" aria-hidden="true" />
-            {isZh(locale) ? "複製" : "Copy"}
+            {copied ? (isZh(locale) ? "已複製" : "Copied") : isZh(locale) ? "複製" : "Copy"}
           </button>
           <button
             type="button"
-            disabled={!depositWalletAddress || liveTopUp.env.status !== "ready" || funding.account.status !== "connected"}
+            disabled={!depositWalletAddress || liveTopUp.env.status !== "ready" || liveTopUp.account.status !== "connected"}
             onClick={() => {
-              if (funding.account.status === "connected") {
+              if (liveTopUp.account.status === "connected") {
                 void fetch("/api/polymarket/deposit-wallet/sync-balance-allowance", {
                   method: "POST",
                   headers: { "content-type": "application/json" },
-                  body: JSON.stringify({ address: funding.account.address })
+                  body: JSON.stringify({ address: liveTopUp.account.address })
                 });
               }
             }}
@@ -157,6 +277,10 @@ export function FundingPanel({
       </div>
 
       <div className="mt-3 grid gap-2">
+        <FundingMetric
+          label={isZh(locale) ? "Deposit Wallet 狀態" : "Deposit wallet status"}
+          value={deployedStatusLabel(liveTopUp.depositWallet, locale)}
+        />
         <FundingMetric
           label={isZh(locale) ? "已連接錢包 pUSD" : "Connected wallet pUSD"}
           value={
@@ -208,13 +332,45 @@ export function FundingPanel({
         ))}
       </div>
 
+      <div className="mt-3 rounded-md border border-[var(--border)] p-3">
+        <div className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
+          {isZh(locale) ? "精確授權預覽" : "Exact approval preview"}
+        </div>
+        <div className="mt-2 grid gap-2">
+          <FundingMetric
+            label={isZh(locale) ? "金額" : "Amount"}
+            value={
+              approvalPreview.status === "ready"
+                ? formatBaseUnits(approvalPreview.amountBaseUnits)
+                : approvalPreview.code
+            }
+          />
+          <FundingMetric
+            label="Spender"
+            value={
+              approvalPreview.status === "ready"
+                ? approvalPreview.spenderAddress
+                : approvalPreview.code
+            }
+          />
+          <FundingMetric
+            label="Calls"
+            value={
+              approvalPreview.status === "ready"
+                ? "1 approve call"
+                : approvalPreview.code
+            }
+          />
+        </div>
+      </div>
+
       <button
         type="button"
         disabled
         className="mt-3 flex h-11 w-full cursor-not-allowed items-center justify-center gap-2 rounded-md border border-[var(--border)] bg-[var(--card)] px-4 text-sm font-bold text-[var(--muted-foreground)]"
       >
         <Ban className="size-4" aria-hidden="true" />
-        {isZh(locale) ? "只允許精確授權" : "Exact approval only"}
+        {approvalSubmitLabel(liveTopUp, locale)}
       </button>
 
       {method ? (
@@ -239,6 +395,59 @@ export function FundingPanel({
       </button>
     </section>
   );
+}
+
+function useLiveTopUpSnapshot(
+  initialSnapshot: LiveTopUpFundingSnapshot,
+  walletState: WalletConnectionViewState
+) {
+  const address = walletState.status === "connected" ? walletState.address : null;
+  const [snapshot, setSnapshot] = useState<LiveTopUpFundingSnapshot | null>(null);
+
+  useEffect(() => {
+    if (!address) {
+      return;
+    }
+
+    const controller = new AbortController();
+    const url = new URL(
+      "/api/polymarket/deposit-wallet/status",
+      window.location.origin
+    );
+    url.searchParams.set("address", address);
+
+    void fetch(url, {
+      cache: "no-store",
+      headers: { accept: "application/json" },
+      signal: controller.signal
+    })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((payload: LiveTopUpFundingSnapshot | null) => {
+        if (
+          payload?.account.status === "connected" &&
+          payload.account.address === address
+        ) {
+          setSnapshot(payload);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      controller.abort();
+    };
+  }, [address]);
+
+  return useMemo(() => {
+    if (
+      address &&
+      snapshot?.account.status === "connected" &&
+      snapshot.account.address === address
+    ) {
+      return snapshot;
+    }
+
+    return initialSnapshot;
+  }, [address, initialSnapshot, snapshot]);
 }
 
 function FundingMetric({ label, value }: { label: string; value: string }) {

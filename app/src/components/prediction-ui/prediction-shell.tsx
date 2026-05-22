@@ -7,6 +7,8 @@ import {
   TrendingUp
 } from "lucide-react";
 import { Link } from "@/i18n/navigation";
+import { WalletConnectButton } from "./wallet-connect-button";
+import { WalletRouteSync } from "./wallet-route-sync";
 
 export function PredictionShell({
   children,
@@ -17,6 +19,7 @@ export function PredictionShell({
 }) {
   return (
     <div className="min-h-screen pb-[72px] lg:pb-0">
+      <WalletRouteSync />
       <header className="sticky top-0 z-30 bg-[var(--background)]">
         <div className="app-container relative z-50 flex min-h-[60px] w-full items-center justify-between gap-2 py-3 pb-1 md:min-h-[68px] md:gap-4 md:pb-2">
           <Link
@@ -46,12 +49,7 @@ export function PredictionShell({
           </div>
 
           <div className="flex min-w-fit shrink-0 items-center gap-2">
-            <button className="focus-ring inline-flex h-9 shrink-0 items-center justify-center rounded-sm px-3 py-2 text-sm font-medium whitespace-nowrap text-[var(--primary)] no-underline transition-colors hover:bg-[var(--accent)] md:px-4">
-              Log In
-            </button>
-            <button className="focus-ring inline-flex h-9 shrink-0 items-center justify-center rounded-sm bg-[var(--primary)] px-3 py-2 text-sm font-medium whitespace-nowrap text-white shadow-sm transition-colors hover:bg-[color-mix(in_srgb,var(--primary)_90%,black)] md:px-4">
-              Sign Up
-            </button>
+            <WalletConnectButton />
           </div>
         </div>
       </header>

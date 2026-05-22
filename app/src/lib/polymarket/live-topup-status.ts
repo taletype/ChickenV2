@@ -6,12 +6,17 @@ import {
   type BalanceAllowanceSnapshot
 } from "./balance-allowance";
 import {
+  buildDepositWalletApprovalPreview,
+  type DepositWalletApprovalPreview
+} from "./deposit-wallet-approval";
+import {
   buildDepositWalletSnapshot,
   hasPositiveBalance,
   readPusdBalanceSnapshot,
   type DepositWalletSnapshot,
   type TokenBalanceSnapshot
 } from "./deposit-wallet";
+import { PUSD_DECIMALS } from "./contracts";
 import { getLiveTopUpEnvStatus, type LiveTopUpEnvStatus } from "./live-topup-env";
 
 export type LiveTopUpPublicEnvStatus = {
@@ -43,6 +48,7 @@ export type LiveTopUpFundingSnapshot = {
     depositWalletPusd: TokenBalanceSnapshot;
     clob: BalanceAllowanceSnapshot;
   };
+  approvalPreview: DepositWalletApprovalPreview;
   readiness: {
     step: LiveTopUpStep;
     topUpReady: boolean;
@@ -127,6 +133,16 @@ function stateFromBoolean(value: boolean, unavailable = false) {
   return value ? ("ready" as const) : ("blocked" as const);
 }
 
+function requiredAmountBaseUnits(requiredAmount: number | undefined) {
+  const amount =
+    typeof requiredAmount === "number" &&
+    Number.isFinite(requiredAmount) &&
+    requiredAmount > 0
+      ? requiredAmount
+      : 1;
+  return String(Math.ceil(amount * 10 ** PUSD_DECIMALS));
+}
+
 export async function buildLiveTopUpFundingSnapshot(input: {
   address?: string | null;
   requiredAmount?: number;
@@ -152,6 +168,10 @@ export async function buildLiveTopUpFundingSnapshot(input: {
     clob
   });
   const topUpReady = step === "ready";
+  const approvalPreview = buildDepositWalletApprovalPreview({
+    ownerAddress: account.address,
+    amountBaseUnits: requiredAmountBaseUnits(input.requiredAmount)
+  });
 
   return {
     account,
@@ -162,6 +182,7 @@ export async function buildLiveTopUpFundingSnapshot(input: {
       depositWalletPusd,
       clob
     },
+    approvalPreview,
     readiness: {
       step,
       topUpReady,

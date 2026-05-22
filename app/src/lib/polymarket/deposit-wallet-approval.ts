@@ -65,6 +65,25 @@ export type DepositWalletApprovalPlan =
       invalid?: readonly string[];
     };
 
+export type DepositWalletApprovalPreview =
+  | {
+      status: "ready";
+      ownerAddress: EvmAddress;
+      depositWalletAddress: EvmAddress;
+      amountBaseUnits: string;
+      spenderAddress: EvmAddress;
+      tokenAddress: EvmAddress;
+      calls: DepositWalletCall[];
+    }
+  | {
+      status: "blocked";
+      code:
+        | "missing_wallet"
+        | "missing_deposit_wallet"
+        | "invalid_amount"
+        | "invalid_spender";
+    };
+
 function parsePositiveBaseUnits(value: string | bigint | number | null | undefined) {
   if (typeof value === "bigint") {
     return value > 0n && value !== maxUint256 ? value : null;
@@ -157,6 +176,51 @@ export function validateDepositWalletPusdApprovalCall(input: {
     spenderAddress: spender,
     tokenAddress: env.config.pusdAddress,
     call: input.call
+  };
+}
+
+export function buildDepositWalletApprovalPreview(input: {
+  ownerAddress: string | null | undefined;
+  amountBaseUnits: string | bigint | number | null | undefined;
+  spenderAddress?: string | null;
+}): DepositWalletApprovalPreview {
+  const ownerAddress = normalizeEvmAddress(input.ownerAddress);
+  if (!ownerAddress) {
+    return { status: "blocked", code: "missing_wallet" };
+  }
+
+  const depositWalletAddress = derivePolymarketDepositWalletAddress(ownerAddress);
+  if (!depositWalletAddress) {
+    return { status: "blocked", code: "missing_deposit_wallet" };
+  }
+
+  const amount = parsePositiveBaseUnits(input.amountBaseUnits);
+  const spenderAddress = resolveApprovalSpender(input.spenderAddress);
+  if (!amount) {
+    return { status: "blocked", code: "invalid_amount" };
+  }
+  if (!spenderAddress) {
+    return { status: "blocked", code: "invalid_spender" };
+  }
+
+  const call = buildDepositWalletPusdApprovalCall({
+    amountBaseUnits: amount,
+    spenderAddress
+  });
+  const validation = validateDepositWalletPusdApprovalCall({
+    call,
+    amountBaseUnits: amount,
+    spenderAddress
+  });
+
+  return {
+    status: "ready",
+    ownerAddress,
+    depositWalletAddress,
+    amountBaseUnits: validation.amountBaseUnits,
+    spenderAddress,
+    tokenAddress: validation.tokenAddress,
+    calls: [validation.call]
   };
 }
 

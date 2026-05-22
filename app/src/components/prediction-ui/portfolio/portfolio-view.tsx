@@ -3,6 +3,7 @@
 import { Activity, ReceiptText, WalletCards } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import type { PredictionPortfolioViewModel } from "@/features/prediction/types";
+import { useWalletConnectionState } from "@/hooks/use-wallet-connection-state";
 import { FundingPanel } from "../funding/funding-panel";
 import { StatusBanner } from "../status-banner";
 
@@ -79,9 +80,20 @@ export function PortfolioView({
   locale?: string;
 }) {
   const [activeTab, setActiveTab] = useState<PortfolioTab>("positions");
+  const walletState = useWalletConnectionState();
   const totalCurrentValue =
     portfolio.pnl.status === "available" ? portfolio.pnl.totalCurrentValue : null;
-  const addressLabel = portfolio.addressLabel ?? "No wallet connected";
+  const walletConnected =
+    walletState.status === "connected" || walletState.status === "unsupported_chain";
+  const addressLabel = walletConnected
+    ? walletState.label
+    : portfolio.addressLabel ?? "No wallet connected";
+  const walletStatus =
+    walletState.status === "unsupported_chain"
+      ? "Wrong network"
+      : walletState.status === "connected"
+        ? "Connected wallet"
+        : portfolio.status;
 
   return (
     <main className="app-container-sm py-8">
@@ -96,12 +108,16 @@ export function PortfolioView({
                 <div className="text-3xl font-bold leading-tight text-[var(--foreground)] sm:text-4xl">
                   {portfolio.status === "ready"
                     ? formatCurrency(totalCurrentValue)
-                    : "Connect wallet"}
+                    : walletConnected
+                      ? "Wallet connected"
+                      : "Connect wallet"}
                 </div>
                 <div className="text-sm font-semibold text-[var(--muted-foreground)]">
                   {portfolio.status === "ready"
                     ? `Connected as ${addressLabel}`
-                    : "Real account data appears after wallet connection."}
+                    : walletConnected
+                      ? `${walletStatus}: ${addressLabel}`
+                      : "Real account data appears after wallet connection."}
                 </div>
               </div>
               <div className="grid size-11 shrink-0 place-items-center rounded-md bg-[var(--foreground)] text-white">
@@ -134,6 +150,7 @@ export function PortfolioView({
 
             <div className="mt-6 space-y-4">
               <StatusLine label="Wallet" value={addressLabel} />
+              <StatusLine label="Wallet state" value={walletStatus} />
               <StatusLine
                 label="Position value"
                 value={

@@ -3,6 +3,7 @@
 import { ChevronDown, LockKeyhole, ShieldCheck } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { PredictionTradeTicketViewModel } from "@/features/prediction/types";
+import { useWalletConnectionState } from "@/hooks/use-wallet-connection-state";
 
 type Outcome = {
   label: string;
@@ -24,6 +25,7 @@ function disabledReasonLabel(reason: string | null, locale?: string) {
     sync_clob_balance: "Sync CLOB balance before trading.",
     approval_required: "Exact pUSD approval is required before trading.",
     live_top_up_disabled: "Live top-up gates are disabled on the server.",
+    unsupported_chain: "Switch to Polygon before trading.",
     market_not_tradable: "Trading is not available for this market.",
     missing_token_id: "Token unavailable for this outcome."
   };
@@ -36,6 +38,7 @@ function disabledReasonLabel(reason: string | null, locale?: string) {
     sync_clob_balance: "交易前請先同步 CLOB 餘額。",
     approval_required: "交易前需要精確 pUSD 授權。",
     live_top_up_disabled: "伺服器 live top-up 閘門未啟用。",
+    unsupported_chain: "交易前請切換至 Polygon。",
     market_not_tradable: "此市場暫不可交易。",
     missing_token_id: "此選項沒有可用 token。"
   };
@@ -56,6 +59,7 @@ export function TradeTicket({
   outcomes: Outcome[];
   locale?: string;
 }) {
+  const walletState = useWalletConnectionState();
   const [side, setSide] = useState<"BUY" | "SELL">(ticket.side);
   const [selectedTokenId, setSelectedTokenId] = useState(ticket.selectedTokenId);
   const selected = useMemo(
@@ -65,7 +69,14 @@ export function TradeTicket({
       null,
     [outcomes, selectedTokenId]
   );
-  const unavailable = ticket.status !== "ready" || !selected?.tokenId;
+  const clientDisabledReason =
+    walletState.status === "unsupported_chain"
+      ? "unsupported_chain"
+      : ticket.disabledReason;
+  const unavailable =
+    ticket.status !== "ready" ||
+    !selected?.tokenId ||
+    walletState.status === "unsupported_chain";
 
   return (
     <section className="w-full rounded-xl border border-[var(--border)] bg-[var(--card)] p-4 shadow-[var(--panel-shadow)] lg:w-[21.25rem]">
@@ -181,7 +192,7 @@ export function TradeTicket({
 
       <p className="mt-3 text-xs leading-5 text-[var(--muted-foreground)]">
         {unavailable
-          ? disabledReasonLabel(ticket.disabledReason, locale)
+          ? disabledReasonLabel(clientDisabledReason, locale)
           : isZh(locale)
             ? "錢包、充值及伺服器閘門均通過後才可提交。"
             : "Wallet, funding, and server gates passed; submit still uses the guarded live path."}
