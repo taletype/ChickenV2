@@ -1,4 +1,5 @@
 import type { DataFreshness, PolymarketPricePoint } from "@/lib/polymarket/types";
+import type { PredictionFeedSort } from "./routes";
 
 export type PredictionMarketCardViewModel = {
   id: string;
@@ -20,6 +21,7 @@ export type PredictionMarketCardViewModel = {
   }>;
   tradable: boolean;
   endDate: string | null;
+  updatedAt: string | null;
 };
 
 export type PredictionMarketFeedViewModel = {
@@ -27,6 +29,8 @@ export type PredictionMarketFeedViewModel = {
   markets: PredictionMarketCardViewModel[];
   freshness: DataFreshness;
   selectedCategory: string;
+  selectedSearch: string;
+  selectedSort: PredictionFeedSort;
   error: string | null;
 };
 

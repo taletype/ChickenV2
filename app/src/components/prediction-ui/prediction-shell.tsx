@@ -1,23 +1,24 @@
 import {
-  BarChart3,
-  House,
   Info,
   Search,
-  Sparkles,
-  TrendingUp
 } from "lucide-react";
 import { Suspense } from "react";
 import { Link } from "@/i18n/navigation";
+import { getLocalizedPolymarketFeedPath } from "@/features/prediction/routes";
+import { MobileBottomNav } from "./mobile-bottom-nav";
 import { WalletConnectButton } from "./wallet-connect-button";
 import { WalletRouteSync } from "./wallet-route-sync";
 
 export function PredictionShell({
   children,
-  locale: _locale
+  locale
 }: {
   children: React.ReactNode;
   locale: string;
 }) {
+  const isZh = locale.toLowerCase().startsWith("zh");
+  const searchLabel = isZh ? "搜尋市場" : "Search markets";
+
   return (
     <div className="min-h-screen pb-[72px] lg:pb-0">
       <Suspense fallback={null}>
@@ -36,18 +37,33 @@ export function PredictionShell({
           </Link>
 
           <div className="hidden w-full items-center gap-2 lg:flex">
-            <div className="relative w-full max-w-[360px]">
+            <form
+              action={getLocalizedPolymarketFeedPath(locale)}
+              className="relative w-full max-w-[520px] min-w-[360px]"
+              role="search"
+            >
               <Search
                 className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--muted-foreground)]"
                 aria-hidden="true"
               />
-              <div className="h-9 rounded-md border border-transparent bg-[var(--accent)] pl-10 pr-3 text-sm leading-9 text-[var(--muted-foreground)] transition-colors hover:bg-[var(--muted)]">
-                Search
-              </div>
-            </div>
+              <input
+                type="search"
+                name="search"
+                aria-label={searchLabel}
+                placeholder={isZh ? "搜尋" : "Search"}
+                className="h-10 w-full rounded-md border border-transparent bg-[var(--accent)] py-1 pl-10 pr-10 text-sm text-[var(--foreground)] outline-none transition-colors placeholder:text-[var(--muted-foreground)] hover:bg-[var(--muted)] focus:border-[var(--border)] focus:bg-[var(--background)]"
+              />
+              <button
+                type="submit"
+                aria-label={searchLabel}
+                className="focus-ring absolute right-2 top-1/2 inline-flex size-7 -translate-y-1/2 items-center justify-center rounded-sm text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+              >
+                <Search className="size-4" aria-hidden="true" />
+              </button>
+            </form>
             <button className="focus-ring inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-sm px-4 py-2 text-sm font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--accent)]">
               <Info className="size-4" aria-hidden="true" />
-              How it works
+              {isZh ? "運作方式" : "How it works"}
             </button>
           </div>
 
@@ -59,65 +75,9 @@ export function PredictionShell({
 
       <main>{children}</main>
 
-      <nav
-        className="fixed inset-x-0 bottom-0 z-40 lg:hidden"
-        aria-label="Primary navigation"
-      >
-        <div className="border-t border-[var(--border)] bg-[var(--background)]/95 pb-[calc(env(safe-area-inset-bottom)+0.25rem)] shadow-[0_-20px_48px_-36px_rgba(15,23,42,0.55)] backdrop-blur-sm">
-          <div className="grid h-[66px] grid-cols-4">
-            <MobileNavLink href="/polymarket" label="Home" active icon={House} />
-            <MobileNavButton label="Search" icon={Search} />
-            <MobileNavLink href="/polymarket?category=trending" label="New" icon={Sparkles} />
-            <MobileNavLink href="/portfolio" label="Portfolio" icon={BarChart3} />
-          </div>
-        </div>
-      </nav>
+      <Suspense fallback={<div aria-hidden="true" className="lg:hidden" style={{ height: "calc(env(safe-area-inset-bottom) + 4.125rem + 0.25rem + 1px)" }} />}>
+        <MobileBottomNav locale={locale} />
+      </Suspense>
     </div>
-  );
-}
-
-function MobileNavLink({
-  href,
-  label,
-  icon: Icon,
-  active = false
-}: {
-  href: string;
-  label: string;
-  icon: typeof House;
-  active?: boolean;
-}) {
-  return (
-    <Link
-      href={href}
-      aria-current={active ? "page" : undefined}
-      className={
-        active
-          ? "focus-ring flex size-full flex-col items-center justify-center gap-1 px-2 text-[11px] font-semibold leading-none text-[var(--foreground)] transition-colors"
-          : "focus-ring flex size-full flex-col items-center justify-center gap-1 px-2 text-[11px] font-semibold leading-none text-[var(--muted-foreground)] transition-colors"
-      }
-    >
-      <Icon className="size-[17px]" aria-hidden="true" />
-      <span className="max-w-full truncate">{label}</span>
-    </Link>
-  );
-}
-
-function MobileNavButton({
-  label,
-  icon: Icon
-}: {
-  label: string;
-  icon: typeof TrendingUp;
-}) {
-  return (
-    <button
-      type="button"
-      className="focus-ring flex size-full flex-col items-center justify-center gap-1 px-2 text-[11px] font-semibold leading-none text-[var(--muted-foreground)] transition-colors"
-      aria-label={label}
-    >
-      <Icon className="size-[17px]" aria-hidden="true" />
-      <span>{label}</span>
-    </button>
   );
 }

@@ -8,17 +8,24 @@ export default async function PolymarketPage({
   searchParams
 }: {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ category?: string }>;
+  searchParams: Promise<{ category?: string; search?: string; sort?: string }>;
 }) {
   const [{ locale }, query] = await Promise.all([params, searchParams]);
   const feed = await buildMarketFeedViewModel({
     locale,
-    category: query.category
+    category: query.category,
+    search: query.search,
+    sort: query.sort
   });
 
   return (
     <div>
-      <FeedToolbar selectedCategory={feed.selectedCategory} />
+      <FeedToolbar
+        locale={locale}
+        selectedCategory={feed.selectedCategory}
+        selectedSearch={feed.selectedSearch}
+        selectedSort={feed.selectedSort}
+      />
       <section className="app-container pb-6">
         {feed.freshness.stale ? (
           <div className="mb-4">

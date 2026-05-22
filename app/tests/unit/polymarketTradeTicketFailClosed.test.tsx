@@ -16,7 +16,8 @@ describe("trade ticket adapter", () => {
         bestOutcome: null,
         outcomes: [{ label: "Yes", price: null, tokenId: null }],
         tradable: true,
-        endDate: null
+        endDate: null,
+        updatedAt: null
       }
     });
 
@@ -38,7 +39,8 @@ describe("trade ticket adapter", () => {
         bestOutcome: null,
         outcomes: [{ label: "Yes", price: 0.5, tokenId: "123" }],
         tradable: true,
-        endDate: null
+        endDate: null,
+        updatedAt: null
       }
     });
 
